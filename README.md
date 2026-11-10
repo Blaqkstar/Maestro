@@ -1,4 +1,4 @@
-# SWE AI Orchestrated System
+# Maestro | SWE Orchestrated AI System
 
 An intelligent, multi-agent software engineering assistant that automates complex coding tasks through orchestrated AI agents working in tandem.
 
