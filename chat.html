@@ -1,0 +1,2737 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM-Orchestra Chat</title>
+    <style>
+      :root {
+        --bg: #09090b;
+        --bg-2: #18181b;
+        --bg-3: #27272a;
+        --border: #27272a;
+        --text: #fafafa;
+        --text-2: #a1a1aa;
+        --text-3: #71717a;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --green: #22c55e;
+        --red: #ef4444;
+        --yellow: #eab308;
+        --purple: #a855f7;
+        --blue: #3b82f6;
+        --pink: #ec4899;
+        --code-bg: #0c0c0f;
+        --radius: 8px;
+        --font:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        --mono:
+          "SF Mono", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+        line-height: 1.6;
+        overflow: hidden;
+      }
+      #app {
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+      }
+
+      #sidebar {
+        width: 260px;
+        flex-shrink: 0;
+        background: var(--bg-2);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #sidebar.hidden {
+        display: none;
+      }
+      #sidebar header {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+      }
+      #new-chat {
+        flex: 1;
+        background: var(--accent);
+        border: none;
+        color: white;
+        padding: 10px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 500;
+        font-family: inherit;
+        font-size: 13px;
+      }
+      #new-chat:hover {
+        background: var(--accent-hover);
+      }
+
+      #session-search-wrap {
+        padding: 8px 8px 0 8px;
+      }
+      #session-search {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 7px 10px;
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 12px;
+        outline: none;
+      }
+      #session-search:focus {
+        border-color: var(--accent);
+      }
+      #session-search::placeholder {
+        color: var(--text-3);
+      }
+
+      #session-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+      .session-item {
+        padding: 10px 12px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        margin-bottom: 4px;
+        border: 1px solid transparent;
+        position: relative;
+      }
+      .session-item:hover {
+        background: var(--bg-3);
+      }
+      .session-item.active {
+        background: var(--bg-3);
+        border-color: var(--border);
+      }
+      .session-item .title {
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-right: 28px;
+      }
+      .session-item .meta {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .session-item .mode-badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .mode-badge.plan {
+        background: rgba(168, 85, 247, 0.15);
+        color: var(--purple);
+      }
+      .mode-badge.code,
+      .mode-badge.act {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+      }
+      .mode-badge.copy {
+        background: rgba(236, 72, 153, 0.15);
+        color: var(--pink);
+      }
+      .session-delete {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: var(--text-3);
+        cursor: pointer;
+        padding: 4px;
+        display: none;
+        font-size: 14px;
+      }
+      .session-item:hover .session-delete {
+        display: block;
+      }
+      .session-delete:hover {
+        color: var(--red);
+      }
+
+      #main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-width: 0;
+      }
+      #chat-header {
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--bg-2);
+      }
+
+      #sidebar-toggle {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-2);
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      #sidebar-toggle:hover {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+
+      #chat-title {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text);
+        cursor: pointer;
+      }
+      #chat-title:hover {
+        color: var(--text-2);
+      }
+
+      #mode-toggle {
+        display: flex;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      #mode-toggle button {
+        padding: 6px 14px;
+        border: none;
+        background: transparent;
+        color: var(--text-2);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      #mode-toggle button:hover {
+        color: var(--text);
+      }
+      #mode-toggle button.active {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+      #mode-toggle button[data-mode="plan"].active {
+        color: var(--purple);
+      }
+      #mode-toggle button[data-mode="code"].active {
+        color: var(--green);
+      }
+      #mode-toggle button[data-mode="copy"].active {
+        color: var(--pink);
+      }
+
+      #header-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .icon-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-2);
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .icon-btn:hover {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+
+      #messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        scroll-behavior: smooth;
+      }
+
+      .msg {
+        max-width: 900px;
+        width: 100%;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .msg.user {
+        align-items: flex-end;
+      }
+      .msg.user .bubble {
+        background: var(--accent);
+        color: white;
+        padding: 10px 14px;
+        border-radius: 14px 14px 4px 14px;
+        max-width: 80%;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .msg.assistant .bubble {
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        padding: 14px 18px;
+        border-radius: 4px 14px 14px 14px;
+        width: 100%;
+        word-break: break-word;
+      }
+      .msg.system .bubble {
+        background: transparent;
+        border: 1px dashed var(--border);
+        color: var(--text-3);
+        padding: 8px 12px;
+        border-radius: var(--radius);
+        font-size: 12px;
+        font-style: italic;
+        text-align: center;
+        margin: 0 auto;
+        max-width: 500px;
+      }
+
+      .msg-meta {
+        display: flex;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--text-3);
+        align-items: center;
+      }
+      .msg-meta .msg-actions {
+        display: none;
+        gap: 4px;
+      }
+      .msg:hover .msg-meta .msg-actions {
+        display: flex;
+      }
+      .msg-action {
+        background: transparent;
+        border: none;
+        color: var(--text-3);
+        cursor: pointer;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .msg-action:hover {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+      .msg-tokens {
+        font-family: var(--mono);
+        color: var(--text-3);
+        font-size: 10px;
+      }
+
+      .thinking {
+        background: rgba(168, 85, 247, 0.05);
+        border: 1px solid rgba(168, 85, 247, 0.2);
+        border-radius: var(--radius);
+        margin-bottom: 10px;
+        overflow: hidden;
+        font-size: 13px;
+      }
+      .thinking-header {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        color: var(--purple);
+      }
+      .thinking-header:hover {
+        background: rgba(168, 85, 247, 0.08);
+      }
+      .thinking-icon {
+        display: inline-block;
+        animation: spin 1s linear infinite;
+      }
+      .thinking[data-state="done"] .thinking-icon {
+        animation: none;
+        color: var(--text-3);
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .thinking-label {
+        flex: 1;
+        font-weight: 500;
+      }
+      .thinking-time {
+        font-size: 11px;
+        color: var(--text-3);
+      }
+      .thinking-toggle {
+        background: transparent;
+        border: none;
+        color: var(--purple);
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0 4px;
+        transition: transform 0.15s;
+      }
+      .thinking[data-state="done"] .thinking-toggle {
+        color: var(--text-3);
+      }
+      .thinking[data-collapsed="true"] .thinking-toggle {
+        transform: rotate(-90deg);
+      }
+      .thinking-body {
+        padding: 0 12px 12px 12px;
+        color: var(--text-2);
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.5;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .thinking[data-collapsed="true"] .thinking-body {
+        display: none;
+      }
+
+      .tool-call {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg-3);
+        border: 1px solid var(--border);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        margin: 4px 4px 4px 0;
+        font-family: var(--mono);
+        color: var(--text-2);
+      }
+      .tool-call .tool-icon {
+        color: var(--blue);
+      }
+      .tool-call.error {
+        border-color: var(--red);
+        color: var(--red);
+      }
+      .tool-call .tool-size {
+        color: var(--text-3);
+        font-size: 11px;
+      }
+
+      .critic-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(168, 85, 247, 0.08);
+        border: 1px solid rgba(168, 85, 247, 0.25);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        margin: 4px 4px 4px 0;
+        color: var(--purple);
+        font-family: var(--font);
+      }
+      .critic-chip .critic-spin {
+        display: inline-block;
+        animation: spin 1s linear infinite;
+      }
+      .critic-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .critic-badge.approved {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+      }
+      .critic-badge.rejected {
+        background: rgba(234, 179, 8, 0.15);
+        color: var(--yellow);
+      }
+      .critic-badge.skipped {
+        background: var(--bg-3);
+        color: var(--text-3);
+      }
+
+      .critic-concerns {
+        background: rgba(234, 179, 8, 0.06);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        border-radius: var(--radius);
+        padding: 10px 14px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--yellow);
+      }
+      .critic-concerns strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 8px;
+      }
+      .status-pill.plan_ready {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+      }
+      .status-pill.need_info {
+        background: rgba(234, 179, 8, 0.15);
+        color: var(--yellow);
+      }
+      .status-pill.options {
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--blue);
+      }
+      .status-pill.unknown,
+      .status-pill.no_patches {
+        background: var(--bg-3);
+        color: var(--text-3);
+      }
+
+      .plan-to-act-wrap {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .btn-plan-to-act {
+        background: var(--green);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        font-family: inherit;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-plan-to-act:hover {
+        background: #16a34a;
+      }
+      .plan-to-act-hint {
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      .patch-preview {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-top: 12px;
+        overflow: hidden;
+      }
+      .patch-header {
+        padding: 10px 14px;
+        background: var(--bg-3);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .patch-header h4 {
+        margin: 0;
+        font-size: 13px;
+        flex: 1;
+        min-width: 150px;
+      }
+      .patch-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .btn-apply {
+        background: var(--green);
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        font-family: inherit;
+        font-size: 12px;
+      }
+      .btn-apply:hover {
+        background: #16a34a;
+      }
+      .btn-apply.warn {
+        background: var(--yellow);
+        color: #1a1a1a;
+      }
+      .btn-apply.warn:hover {
+        background: #ca8a04;
+      }
+      .btn-reject {
+        background: transparent;
+        color: var(--text-2);
+        border: 1px solid var(--border);
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 12px;
+      }
+      .btn-reject:hover {
+        border-color: var(--red);
+        color: var(--red);
+      }
+      .patch-diff {
+        padding: 12px;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .patch-diff .diff-add {
+        color: var(--green);
+      }
+      .patch-diff .diff-del {
+        color: var(--red);
+      }
+      .patch-diff .diff-hunk {
+        color: var(--blue);
+      }
+      .patch-diff .diff-file {
+        color: var(--purple);
+        font-weight: 600;
+      }
+      .patch-errors {
+        padding: 12px 14px;
+        background: rgba(239, 68, 68, 0.08);
+        border-top: 1px solid rgba(239, 68, 68, 0.3);
+        color: var(--red);
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+
+      .bubble h1,
+      .bubble h2,
+      .bubble h3,
+      .bubble h4,
+      .bubble h5,
+      .bubble h6 {
+        margin: 12px 0 6px 0;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .bubble h3 {
+        font-size: 15px;
+      }
+      .bubble h4 {
+        font-size: 14px;
+      }
+      .bubble p {
+        margin: 6px 0;
+      }
+      .bubble p:first-child {
+        margin-top: 0;
+      }
+      .bubble p:last-child {
+        margin-bottom: 0;
+      }
+      .bubble ul,
+      .bubble ol {
+        margin: 6px 0;
+        padding-left: 24px;
+      }
+      .bubble li {
+        margin: 2px 0;
+      }
+      .bubble a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .bubble a:hover {
+        text-decoration: underline;
+      }
+      .bubble code {
+        background: var(--code-bg);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--purple);
+      }
+      .bubble pre.code-block {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+        overflow-x: auto;
+        margin: 8px 0;
+        position: relative;
+      }
+      .bubble pre.code-block code {
+        background: transparent;
+        padding: 0;
+        color: var(--text);
+      }
+      .code-copy {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--bg-3);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        font-family: var(--font);
+      }
+      .bubble pre.code-block:hover .code-copy {
+        opacity: 1;
+      }
+      .code-copy:hover {
+        color: var(--text);
+      }
+      .marker {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: var(--blue);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      #input-area {
+        border-top: 1px solid var(--border);
+        background: var(--bg-2);
+        padding: 12px 20px 16px;
+        position: relative;
+      }
+      #input-wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        position: relative;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        transition: border-color 0.15s;
+      }
+      #input-wrap:focus-within {
+        border-color: var(--accent);
+      }
+      #input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.5;
+        resize: none;
+        outline: none;
+        max-height: 240px;
+        min-height: 24px;
+        padding: 2px 0;
+      }
+      #input::placeholder {
+        color: var(--text-3);
+      }
+      #mic-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-2);
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      #mic-btn:hover {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+      #mic-btn.recording {
+        background: var(--red);
+        border-color: var(--red);
+        color: white;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+        }
+        50% {
+          box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+        }
+      }
+      #send-btn,
+      #stop-btn {
+        border: none;
+        color: white;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      #send-btn {
+        background: var(--accent);
+      }
+      #send-btn:hover {
+        background: var(--accent-hover);
+      }
+      #send-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      #stop-btn {
+        background: var(--red);
+        display: none;
+      }
+      #stop-btn:hover {
+        background: #dc2626;
+      }
+      #input-hint {
+        max-width: 900px;
+        margin: 6px auto 0;
+        font-size: 11px;
+        color: var(--text-3);
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      #input-hint kbd {
+        background: var(--bg-3);
+        border: 1px solid var(--border);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-2);
+      }
+      #token-counter {
+        font-family: var(--mono);
+        color: var(--text-3);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      #autocomplete {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        right: 0;
+        margin-bottom: 8px;
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        max-height: 220px;
+        overflow-y: auto;
+        display: none;
+        z-index: 60;
+      }
+      #autocomplete.show {
+        display: block;
+      }
+      .ac-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .ac-item:hover,
+      .ac-item.selected {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+      .ac-item .ac-icon {
+        color: var(--blue);
+      }
+
+      #settings {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 360px;
+        height: 100vh;
+        background: var(--bg-2);
+        border-left: 1px solid var(--border);
+        z-index: 100;
+        transform: translateX(100%);
+        transition: transform 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+      #settings.open {
+        transform: translateX(0);
+      }
+      #settings header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #settings header h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+      #settings-close {
+        background: transparent;
+        border: none;
+        color: var(--text-2);
+        font-size: 20px;
+        cursor: pointer;
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+      }
+      #settings-close:hover {
+        background: var(--bg-3);
+        color: var(--text);
+      }
+      #settings form {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .field label {
+        font-size: 12px;
+        color: var(--text-2);
+        font-weight: 500;
+      }
+      .field input[type="text"],
+      .field input[type="number"],
+      .field select {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 13px;
+        outline: none;
+      }
+      .field input:focus,
+      .field select:focus {
+        border-color: var(--accent);
+      }
+      .field input[type="range"] {
+        width: 100%;
+      }
+      .field-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .field-row label {
+        flex: 1;
+      }
+      .value-display {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent);
+        min-width: 40px;
+        text-align: right;
+      }
+      .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .checkbox-field input {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+      .field-hint {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: -2px;
+      }
+      #settings-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99;
+        display: none;
+      }
+      #settings-backdrop.open {
+        display: block;
+      }
+
+      #scroll-bottom {
+        position: absolute;
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        display: none;
+        z-index: 50;
+      }
+      #scroll-bottom.show {
+        display: block;
+      }
+
+      #new-chat-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+      }
+      #new-chat-modal.open {
+        display: flex;
+      }
+      #new-chat-modal .modal-content {
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        width: 480px;
+        max-width: 90vw;
+      }
+      #new-chat-modal h3 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+      }
+      #new-chat-modal .modal-field {
+        margin-bottom: 16px;
+      }
+      #new-chat-modal .modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      #new-chat-modal button {
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 13px;
+        border: none;
+      }
+      #new-chat-modal .cancel {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+      #new-chat-modal .create {
+        background: var(--accent);
+        color: white;
+      }
+
+      .empty-state {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-3);
+        text-align: center;
+        padding: 40px;
+      }
+      .empty-state h2 {
+        color: var(--text);
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .empty-state p {
+        margin: 0 0 4px 0;
+      }
+      .empty-state .kbd-hint {
+        margin-top: 16px;
+        font-size: 12px;
+      }
+      .empty-state kbd {
+        background: var(--bg-3);
+        border: 1px solid var(--border);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-2);
+      }
+
+      @media (max-width: 768px) {
+        #app {
+          grid-template-columns: 1fr;
+        }
+        #sidebar {
+          position: fixed;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 280px;
+          z-index: 90;
+          transform: translateX(-100%);
+          transition: transform 0.2s ease;
+        }
+        #sidebar.mobile-open {
+          transform: translateX(0);
+        }
+        #sidebar.hidden {
+          display: flex;
+          transform: translateX(-100%);
+        }
+        #mode-toggle button {
+          padding: 6px 10px;
+          font-size: 11px;
+        }
+        .msg.user .bubble {
+          max-width: 90%;
+        }
+        #settings {
+          width: 100%;
+        }
+      }
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--bg-3);
+        border-radius: 5px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <header>
+          <button id="new-chat">+ New Chat</button>
+        </header>
+        <div id="session-search-wrap">
+          <input
+            type="search"
+            id="session-search"
+            placeholder="Search sessions…"
+          />
+        </div>
+        <div id="session-list"></div>
+      </aside>
+
+      <div id="main" style="position: relative">
+        <header id="chat-header">
+          <button id="sidebar-toggle" title="Toggle sidebar (Ctrl+/)">
+            ☰
+          </button>
+          <h1 id="chat-title">New Chat</h1>
+          <div id="mode-toggle">
+            <button data-mode="plan">Plan</button>
+            <button data-mode="code">Code</button>
+            <button data-mode="copy">Copy</button>
+          </div>
+          <div id="header-actions">
+            <button class="icon-btn" id="export-btn" title="Export as markdown">
+              ⇩
+            </button>
+            <button class="icon-btn" id="settings-btn" title="Settings">
+              ⚙
+            </button>
+          </div>
+        </header>
+
+        <div id="messages"></div>
+        <button id="scroll-bottom">↓ Jump to bottom</button>
+
+        <div id="input-area">
+          <div id="autocomplete"></div>
+          <div id="input-wrap">
+            <textarea
+              id="input"
+              rows="1"
+              placeholder="Message the agent… (@ to reference a file, Enter to send)"
+            ></textarea>
+            <button id="mic-btn" title="Voice input (Chrome/Edge)">🎤</button>
+            <button id="stop-btn" title="Stop (Esc)">■</button>
+            <button id="send-btn" title="Send (Enter)">↑</button>
+          </div>
+          <div id="input-hint">
+            <span
+              ><kbd>Enter</kbd> send · <kbd>Shift+Enter</kbd> newline ·
+              <kbd>@</kbd> file · <kbd>Esc</kbd> stop</span
+            >
+            <span id="token-counter"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-backdrop"></div>
+    <aside id="settings">
+      <header>
+        <h2>Settings</h2>
+        <button id="settings-close">×</button>
+      </header>
+      <form id="settings-form" onsubmit="return false;">
+        <div class="field">
+          <label for="repo-input">Repository root</label>
+          <input type="text" id="repo-input" placeholder="C:\path\to\project" />
+        </div>
+        <div class="field">
+          <label for="model-select">Model</label>
+          <select id="model-select">
+            <option value="qwen.qwen3-coder-30b-a3b-instruct">
+              qwen3-coder-30b (local)
+            </option>
+            <option value="gemma-3-12b-it">gemma-3-12b (local)</option>
+            <option value="google/gemma-4-12b-qat">
+              gemma-4-12b-qat (local)
+            </option>
+            <option value="qwen2.5-3b-instruct">qwen2.5-3b (local)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temperature</label>
+          <div class="field-row">
+            <input
+              type="range"
+              id="temp-slider"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.2"
+            />
+            <span class="value-display" id="temp-val">0.20</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="max-tokens">Max output tokens</label>
+          <input
+            type="number"
+            id="max-tokens"
+            value="4096"
+            min="256"
+            max="32768"
+            step="256"
+          />
+        </div>
+        <div class="field">
+          <label class="checkbox-field">
+            <input type="checkbox" id="critic-enabled" checked />
+            Enable critic review (Code &amp; Copy modes)
+          </label>
+          <div class="field-hint">
+            Runs a second pass to flag rule violations and quality issues. Adds
+            ~1–2s per turn.
+          </div>
+        </div>
+        <div class="field">
+          <label class="checkbox-field">
+            <input type="checkbox" id="show-thinking" checked />
+            Show thinking content
+          </label>
+        </div>
+        <div class="field">
+          <label class="checkbox-field">
+            <input type="checkbox" id="auto-collapse-thinking" checked />
+            Auto-collapse thinking when done
+          </label>
+        </div>
+        <div class="field">
+          <label class="checkbox-field">
+            <input type="checkbox" id="auto-scroll" checked />
+            Auto-scroll to new content
+          </label>
+        </div>
+      </form>
+    </aside>
+
+    <div id="new-chat-modal">
+      <div class="modal-content">
+        <h3>New Chat</h3>
+        <div class="modal-field field">
+          <label>Repository root</label>
+          <input type="text" id="modal-repo" placeholder="C:\path\to\project" />
+        </div>
+        <div class="modal-field field">
+          <label>Mode</label>
+          <select id="modal-mode">
+            <option value="plan">Plan (read-only ideation)</option>
+            <option value="code">Code (structural edits)</option>
+            <option value="copy">Copy (prose edits)</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="cancel" id="modal-cancel">Cancel</button>
+          <button class="create" id="modal-create">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ═══════════════════════════════════════════════════════════════════════
+      // State
+      // ═══════════════════════════════════════════════════════════════════════
+      const state = {
+        sessions: [],
+        current: null,
+        streaming: false,
+        abortController: null,
+        showThinking: true,
+        autoCollapseThinking: true,
+        autoScroll: true,
+        expandedThinking: new Set(),
+        fileList: null,
+        fileListForSession: null,
+        acVisible: false,
+        acMatches: [],
+        acSelected: 0,
+        acStartPos: -1,
+        recognition: null,
+        recording: false,
+        voiceBaseText: "",
+        searchQuery: "",
+        searchDebounce: null,
+        updatingMode: false,
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const CODE_MODES = new Set(["act", "code"]);
+      const ACTIVE_MODES = new Set(["act", "code", "copy"]);
+
+      // ─── Persistence ──────────────────────────────────────────────────────
+      const persisted = {
+        load() {
+          try {
+            const d = JSON.parse(localStorage.getItem("chat-settings") || "{}");
+            if (d.repo) $("repo-input").value = d.repo;
+            if (d.model) $("model-select").value = d.model;
+            if (d.temp) {
+              $("temp-slider").value = d.temp;
+              $("temp-val").textContent = (+d.temp).toFixed(2);
+            }
+            if (d.maxTokens) $("max-tokens").value = d.maxTokens;
+            if (d.showThinking !== undefined) {
+              $("show-thinking").checked = d.showThinking;
+              state.showThinking = d.showThinking;
+            }
+            if (d.autoCollapse !== undefined) {
+              $("auto-collapse-thinking").checked = d.autoCollapse;
+              state.autoCollapseThinking = d.autoCollapse;
+            }
+            if (d.autoScroll !== undefined) {
+              $("auto-scroll").checked = d.autoScroll;
+              state.autoScroll = d.autoScroll;
+            }
+            if (d.criticEnabled !== undefined)
+              $("critic-enabled").checked = d.criticEnabled;
+          } catch (e) {}
+        },
+        save() {
+          localStorage.setItem(
+            "chat-settings",
+            JSON.stringify({
+              repo: $("repo-input").value,
+              model: $("model-select").value,
+              temp: +$("temp-slider").value,
+              maxTokens: +$("max-tokens").value,
+              showThinking: $("show-thinking").checked,
+              autoCollapse: $("auto-collapse-thinking").checked,
+              autoScroll: $("auto-scroll").checked,
+              criticEnabled: $("critic-enabled").checked,
+            }),
+          );
+        },
+      };
+
+      // ─── Markdown ─────────────────────────────────────────────────────────
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+      function renderMarkdown(text) {
+        const ph = [];
+        text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+          const i = ph.length;
+          ph.push(
+            `<pre class="code-block"><code>${escapeHtml(code.replace(/^\n|\n$/g, ""))}</code><button class="code-copy" onclick="copyCode(this)">Copy</button></pre>`,
+          );
+          return `\u0000C${i}\u0000`;
+        });
+        text = escapeHtml(text);
+        text = text.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+        text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+        text = text.replace(/(?<![*\w])\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
+        text = text.replace(
+          /\[([^\]\n]+)\]\(([^)\s]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener">$1</a>',
+        );
+        text = text.replace(
+          /^(#{1,4})\s+(.+)$/gm,
+          (_, h, t) =>
+            `<h${Math.min(h.length + 2, 6)}>${t}</h${Math.min(h.length + 2, 6)}>`,
+        );
+        text = text.replace(/(?:^|\n)(\d+\.\s+.+(?:\n\d+\.\s+.+)*)/g, (m) => {
+          const items = m
+            .trim()
+            .split("\n")
+            .map((l) => `<li>${l.replace(/^\d+\.\s+/, "")}</li>`)
+            .join("");
+          return `\n<ol>${items}</ol>\n`;
+        });
+        text = text.replace(/(?:^|\n)((?:[-*]\s+.+(?:\n[-*]\s+.+)*))/g, (m) => {
+          const items = m
+            .trim()
+            .split("\n")
+            .map((l) => `<li>${l.replace(/^[-*]\s+/, "")}</li>`)
+            .join("");
+          return `\n<ul>${items}</ul>\n`;
+        });
+        text = text.replace(
+          /&lt;&lt;&lt;\s*(READ|LIST|PATCH)\s+[^&]+&gt;&gt;&gt;/g,
+          (m) => `<span class="marker">${m}</span>`,
+        );
+        const blocks = text.split(/\n{2,}/);
+        text = blocks
+          .map((b) => {
+            b = b.trim();
+            if (!b) return "";
+            if (/^<(h\d|ul|ol|pre|div|p|span)/.test(b)) return b;
+            if (/^\u0000C\d+\u0000$/.test(b)) return b;
+            return `<p>${b.replace(/\n/g, "<br>")}</p>`;
+          })
+          .join("");
+        text = text.replace(/\u0000C(\d+)\u0000/g, (_, i) => ph[+i]);
+        return text;
+      }
+      function copyCode(btn) {
+        const code = btn.parentElement.querySelector("code").textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = "Copied";
+          setTimeout(() => {
+            btn.textContent = "Copy";
+          }, 1200);
+        });
+      }
+      window.copyCode = copyCode;
+
+      // ─── API ──────────────────────────────────────────────────────────────
+      async function fetchSessions() {
+        const q = state.searchQuery.trim();
+        const url = q
+          ? `/api/chat/sessions?q=${encodeURIComponent(q)}`
+          : "/api/chat/sessions";
+        const r = await fetch(url);
+        state.sessions = await r.json();
+        renderSessionList();
+      }
+      async function loadSession(sid) {
+        const r = await fetch(`/api/chat/session/${sid}`);
+        if (!r.ok) return;
+        state.current = await r.json();
+        if (state.current.mode === "act") state.current.mode = "code";
+        state.expandedThinking = new Set();
+        state.fileList = null;
+        state.fileListForSession = null;
+        renderHeader();
+        renderMessages();
+        renderSessionList();
+        updateTokenCounter();
+        refreshFileList();
+      }
+      async function createSession(repo, mode) {
+        const r = await fetch("/api/chat/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repo_root: repo, mode }),
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          alert("Failed to create session: " + (err.error || r.statusText));
+          return null;
+        }
+        return await r.json();
+      }
+      async function updateSession(patch) {
+        if (!state.current) return;
+        const r = await fetch(`/api/chat/session/${state.current.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (r.ok) {
+          state.current = await r.json();
+          updateTokenCounter();
+        } else {
+          alert("Failed to update session settings.");
+        }
+      }
+      async function refreshFileList(force = false) {
+        const repo = state.current
+          ? state.current.repo_root
+          : $("repo-input").value.trim();
+        if (!repo) return;
+        if (!force && state.fileList && state.fileListForSession === repo)
+          return;
+
+        try {
+          // If we have a session, use the session endpoint
+          if (state.current) {
+            const r = await fetch(
+              `/api/chat/session/${state.current.id}/files`,
+            );
+            if (r.ok) {
+              const d = await r.json();
+              state.fileList = d.files || [];
+              state.fileListForSession = repo;
+              return;
+            }
+          }
+          // Otherwise, use scan-folder
+          const r = await fetch("/api/scan-folder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: repo }),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            state.fileList = d.tree || [];
+            state.fileListForSession = repo;
+          }
+        } catch (e) {
+          console.error("Failed to refresh files:", e);
+        }
+      }
+
+      // ─── Token counter ────────────────────────────────────────────────────
+      function updateTokenCounter() {
+        const el = $("token-counter");
+        if (!state.current) {
+          el.textContent = "";
+          return;
+        }
+        const total = state.current.total_tokens || 0;
+        el.textContent =
+          total > 0 ? `session: ${formatTokens(total)} tokens` : "";
+      }
+      function formatTokens(n) {
+        if (n < 1000) return String(n);
+        if (n < 1000000) return (n / 1000).toFixed(1) + "k";
+        return (n / 1000000).toFixed(2) + "M";
+      }
+
+      // ─── Rendering ────────────────────────────────────────────────────────
+      function renderSessionList() {
+        const list = $("session-list");
+        list.innerHTML = "";
+        if (state.sessions.length === 0) {
+          const msg = state.searchQuery
+            ? "No sessions match your search."
+            : 'No sessions yet.<br>Click "+ New Chat".';
+          list.innerHTML = `<div style="padding:16px;color:var(--text-3);font-size:12px;text-align:center">${msg}</div>`;
+          return;
+        }
+        for (const s of state.sessions) {
+          const el = document.createElement("div");
+          el.className =
+            "session-item" + (state.current?.id === s.id ? " active" : "");
+          const tokens = s.total_tokens
+            ? `· ${formatTokens(s.total_tokens)} tok`
+            : "";
+          const modeClass = s.mode === "act" ? "code" : s.mode;
+          el.innerHTML = `
+      <div class="title">${escapeHtml(s.title || "(untitled)")}</div>
+      <div class="meta">
+        <span class="mode-badge ${modeClass}">${modeClass}</span>
+        <span>${s.message_count} msg</span>
+        ${tokens ? `<span>${tokens}</span>` : ""}
+      </div>
+      <button class="session-delete" title="Delete">×</button>
+    `;
+          el.querySelector(".title").onclick = () => loadSession(s.id);
+          el.querySelector(".meta").onclick = () => loadSession(s.id);
+          el.querySelector(".session-delete").onclick = async (e) => {
+            e.stopPropagation();
+            if (!confirm("Delete this session?")) return;
+            await fetch(`/api/chat/session/${s.id}`, { method: "DELETE" });
+            if (state.current?.id === s.id) {
+              state.current = null;
+              renderHeader();
+              renderMessages();
+              updateTokenCounter();
+            }
+            await fetchSessions();
+          };
+          list.appendChild(el);
+        }
+      }
+      function renderHeader() {
+        if (!state.current) {
+          $("chat-title").textContent = "New Chat";
+          document
+            .querySelectorAll("#mode-toggle button")
+            .forEach((b) => b.classList.remove("active"));
+          return;
+        }
+        $("chat-title").textContent = state.current.title || "(untitled)";
+        const curMode =
+          state.current.mode === "act" ? "code" : state.current.mode;
+        document.querySelectorAll("#mode-toggle button").forEach((b) => {
+          b.classList.toggle("active", b.dataset.mode === curMode);
+        });
+        $("repo-input").value = state.current.repo_root || "";
+        $("model-select").value = state.current.model || "";
+        $("temp-slider").value = state.current.temperature ?? 0.2;
+        $("temp-val").textContent = (+$("temp-slider").value).toFixed(2);
+        $("max-tokens").value = state.current.max_tokens ?? 4096;
+        $("critic-enabled").checked = state.current.critic_enabled !== false;
+      }
+      function renderMessages() {
+        const c = $("messages");
+        c.innerHTML = "";
+        if (!state.current) {
+          c.innerHTML = `
+      <div class="empty-state">
+        <h2>Welcome to LLM-Orchestra Chat</h2>
+        <p>Create a session to begin. Set a repo path in Settings first.</p>
+        <p class="kbd-hint">Press <kbd>Ctrl+K</kbd> for new chat · <kbd>Ctrl+/</kbd> to toggle sidebar</p>
+      </div>`;
+          return;
+        }
+        if (state.current.messages.length === 0) {
+          const desc =
+            {
+              plan: "Ask anything about the codebase. The planner can read files but never writes.",
+              code: "Describe a change. The coder will produce a patch preview for your approval.",
+              copy: "Describe a copy change. The writer will produce a patch, and a critic will review it before you see it.",
+              act: "Describe a change. The coder will produce a patch preview for your approval.",
+            }[state.current.mode] || "";
+          c.innerHTML = `
+      <div class="empty-state">
+        <h2>${state.current.mode === "plan" ? "Plan mode" : state.current.mode === "copy" ? "Copy mode" : "Code mode"}</h2>
+        <p>${desc}</p>
+        <p class="kbd-hint">Press <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for newline · <kbd>@</kbd> to reference a file</p>
+      </div>`;
+          return;
+        }
+        let i = 0;
+        while (i < state.current.messages.length) {
+          const m = state.current.messages[i];
+
+          if (m.role === "user" && !m.is_tool_result) {
+            appendUserMessage(m);
+            i++;
+            continue;
+          }
+
+          if (m.role === "assistant") {
+            appendAssistantMessage(m);
+            i++;
+            continue;
+          }
+
+          if (m.role === "system") appendSystemMessage(m);
+          i++;
+        }
+        if (state.current.pending_diff) {
+          appendPendingPatch();
+        } else if (state.current.last_error) {
+          const el = document.createElement("div");
+          el.className = "msg assistant";
+          el.innerHTML = `<div class="bubble">
+      <div class="patch-preview">
+        <div class="patch-header"><h4>⚠️ Patch validation failed</h4></div>
+        <div class="patch-errors">${state.current.last_error.map(escapeHtml).join("<br>")}</div>
+      </div>
+    </div>`;
+          $("messages").appendChild(el);
+        }
+        scrollToBottom(true);
+      }
+      function appendUserMessage(m) {
+        const el = document.createElement("div");
+        el.className = "msg user";
+        el.innerHTML = `
+    <div class="bubble">${escapeHtml(m.content)}</div>
+    <div class="msg-meta">
+      <span>${formatTime(m.timestamp)}</span>
+      <div class="msg-actions">
+        <button class="msg-action" onclick='copyText(this, ${JSON.stringify(JSON.stringify(m.content))})'>Copy</button>
+      </div>
+    </div>`;
+        $("messages").appendChild(el);
+      }
+      function appendAssistantMessage(m) {
+        const el = document.createElement("div");
+        el.className = "msg assistant";
+        const id = "msg-" + Math.random().toString(36).slice(2);
+        let html = "";
+        if (m.thinking && state.showThinking)
+          html += renderThinking(m.thinking, id, m.thinking_duration_s);
+        html += `<div class="bubble">${renderMarkdown(m.content || "")}`;
+        if (m.status) {
+          html += renderStatusPill(m.status);
+          if (m.status.type === "plan_ready" && state.current.mode === "plan") {
+            html += `
+        <div class="plan-to-act-wrap">
+          <button class="btn-plan-to-act" onclick="useThisPlan(${JSON.stringify(JSON.stringify(m.status.summary || "")).replace(/"/g, "&quot;")}, ${JSON.stringify(JSON.stringify(m.content || "")).replace(/"/g, "&quot;")})">
+            Use this plan →
+          </button>
+          <span class="plan-to-act-hint">Switch to Code mode with this plan prefilled</span>
+        </div>`;
+          }
+        }
+        html += `</div>`;
+        const tokens = m.usage_total
+          ? `<span class="msg-tokens">${formatTokens(m.usage_total)} tok</span>`
+          : "";
+        html += `<div class="msg-meta">
+    <span>${formatTime(m.timestamp)}</span>
+    ${tokens}
+    <div class="msg-actions"><button class="msg-action" onclick="retryLast()">Retry</button></div>
+  </div>`;
+        el.innerHTML = html;
+        $("messages").appendChild(el);
+      }
+      function appendSystemMessage(m) {
+        const el = document.createElement("div");
+        el.className = "msg system";
+        el.innerHTML = `<div class="bubble">${escapeHtml(m.content)}</div>`;
+        $("messages").appendChild(el);
+      }
+      function renderPatchPreview(diff, files, criticStatus, criticReason) {
+        const applied = criticStatus || "skipped";
+        let badge = "";
+        if (applied === "approved")
+          badge = `<span class="critic-badge approved">✓ Critic approved</span>`;
+        else if (applied === "rejected")
+          badge = `<span class="critic-badge rejected">⚠️ Critic concerns</span>`;
+        const applyClass =
+          applied === "rejected" ? "btn-apply warn" : "btn-apply";
+        const concerns =
+          applied === "rejected" && criticReason
+            ? `
+    <div class="critic-concerns">
+      <strong>Critic concerns</strong>
+      ${escapeHtml(criticReason)}
+    </div>`
+            : "";
+        return `
+    <div class="patch-preview">
+      <div class="patch-header">
+        <h4>📝 Patch ready: ${files.length} file(s)</h4>
+        ${badge}
+        <div class="patch-actions">
+          <button class="btn-reject" onclick="rejectPatches()">Reject</button>
+          <button class="${applyClass}" onclick="applyPatches()">Apply</button>
+        </div>
+      </div>
+      <div class="patch-diff">${colorDiff(diff)}</div>
+      ${concerns}
+    </div>`;
+      }
+      function appendPendingPatch() {
+        const el = document.createElement("div");
+        el.className = "msg assistant";
+        const diff = state.current.pending_diff || "";
+        const files = Object.keys(state.current.pending_patches || {});
+        el.innerHTML = `<div class="bubble">${renderPatchPreview(
+          diff,
+          files,
+          state.current.pending_critic_status,
+          state.current.pending_critic_reason,
+        )}</div>`;
+        $("messages").appendChild(el);
+      }
+      function renderThinking(thinking, id, durationS) {
+        const collapsed = state.expandedThinking.has(id)
+          ? "false"
+          : state.autoCollapseThinking && !state.streaming
+            ? "true"
+            : "false";
+        return `
+    <div class="thinking" id="${id}-think" data-state="${state.streaming ? "streaming" : "done"}" data-collapsed="${collapsed}">
+      <div class="thinking-header" onclick="toggleThinking('${id}')">
+        <span class="thinking-icon">◐</span>
+        <span class="thinking-label">${state.streaming ? "Thinking…" : "Thought"}</span>
+        <span class="thinking-time">${durationS ? durationS.toFixed(1) + "s" : ""}</span>
+        <button class="thinking-toggle">▾</button>
+      </div>
+      <div class="thinking-body">${escapeHtml(thinking)}</div>
+    </div>`;
+      }
+      function renderStatusPill(status) {
+        if (!status) return "";
+        const labels = {
+          plan_ready: "Plan Ready",
+          need_info: "Need Info",
+          options: "Options",
+          no_patches: "No Patches",
+          unknown: "Done",
+        };
+        return `<div><span class="status-pill ${status.type}">${labels[status.type] || status.type}</span></div>`;
+      }
+      function colorDiff(diff) {
+        return escapeHtml(diff)
+          .split("\n")
+          .map((line) => {
+            if (line.startsWith("+++") || line.startsWith("---"))
+              return `<span class="diff-file">${line}</span>`;
+            if (line.startsWith("@@"))
+              return `<span class="diff-hunk">${line}</span>`;
+            if (line.startsWith("+"))
+              return `<span class="diff-add">${line}</span>`;
+            if (line.startsWith("-"))
+              return `<span class="diff-del">${line}</span>`;
+            return line;
+          })
+          .join("\n");
+      }
+      function formatTime(ts) {
+        if (!ts) return "";
+        try {
+          return new Date(ts).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } catch {
+          return "";
+        }
+      }
+      function toggleThinking(id) {
+        const el = $(id + "-think");
+        if (!el) return;
+        const cur = el.dataset.collapsed === "true";
+        el.dataset.collapsed = cur ? "false" : "true";
+        if (cur) state.expandedThinking.add(id);
+        else state.expandedThinking.delete(id);
+      }
+      window.toggleThinking = toggleThinking;
+
+      async function useThisPlan(summary, fullContent) {
+        if (!state.current) return;
+        if (state.streaming) {
+          alert("Wait for current response.");
+          return;
+        }
+        $("input").disabled = true;
+        await updateSession({ mode: "code" });
+        $("input").disabled = false;
+        const planText = (fullContent || "").trim().slice(0, 1500);
+        $("input").value =
+          `Execute this plan:\n\n${summary || ""}\n\nFull plan context:\n${planText}`.trim();
+        autoResizeInput();
+        updateInputUI();
+        $("input").focus();
+        renderHeader();
+        renderMessages();
+      }
+      window.useThisPlan = useThisPlan;
+
+      // ─── Scroll ───────────────────────────────────────────────────────────
+      function scrollToBottom(force = false) {
+        if (!state.autoScroll && !force) return;
+        const m = $("messages");
+        m.scrollTop = m.scrollHeight;
+        $("scroll-bottom").classList.remove("show");
+      }
+      $("messages").addEventListener("scroll", () => {
+        const m = $("messages");
+        const nearBottom = m.scrollHeight - m.scrollTop - m.clientHeight < 80;
+        if (nearBottom) $("scroll-bottom").classList.remove("show");
+        else if (state.autoScroll) $("scroll-bottom").classList.add("show");
+      });
+      $("scroll-bottom").onclick = () => scrollToBottom(true);
+
+      // ─── Streaming ────────────────────────────────────────────────────────
+      async function sendMessage() {
+        if (!state.current || state.streaming || state.updatingMode) return;
+        const msg = $("input").value.trim();
+        if (!msg) return;
+        $("input").value = "";
+        autoResizeInput();
+        state.streaming = true;
+        updateInputUI();
+        hideAutocomplete();
+
+        state.current.messages.push({
+          role: "user",
+          content: msg,
+          timestamp: new Date().toISOString(),
+        });
+        const messagesEl = $("messages");
+        if (messagesEl.querySelector(".empty-state")) messagesEl.innerHTML = "";
+        appendUserMessage({
+          content: msg,
+          timestamp: new Date().toISOString(),
+        });
+
+        const assistantEl = document.createElement("div");
+        assistantEl.className = "msg assistant";
+        const msgId = "msg-" + Math.random().toString(36).slice(2);
+        assistantEl.innerHTML = `<div id="${msgId}-thinking"></div><div id="${msgId}-status"></div><div class="bubble" id="${msgId}-content"></div>`;
+        messagesEl.appendChild(assistantEl);
+
+        const thinkingEl = $(msgId + "-thinking");
+        const statusEl = $(msgId + "-status");
+        const contentEl = $(msgId + "-content");
+        let fullThinking = "";
+        let fullContent = "";
+        let thinkingStart = null;
+        let thinkingDuration = 0;
+        let criticChip = null;
+
+        const ac = new AbortController();
+        state.abortController = ac;
+        try {
+          const resp = await fetch(
+            `/api/chat/session/${state.current.id}/message`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ message: msg }),
+              signal: ac.signal,
+            },
+          );
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || resp.statusText);
+          }
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const blocks = buffer.split("\n\n");
+            buffer = blocks.pop() || "";
+            for (const block of blocks) {
+              if (!block.trim()) continue;
+              for (const dl of block
+                .split("\n")
+                .filter((l) => l.startsWith("data: "))) {
+                try {
+                  const evt = JSON.parse(dl.slice(6));
+                  handleEvent(evt, {
+                    thinkingEl,
+                    contentEl,
+                    statusEl,
+                    getCriticChip: () => criticChip,
+                    setCriticChip: (c) => {
+                      criticChip = c;
+                    },
+                    appendThinking: (t) => {
+                      if (thinkingStart === null) thinkingStart = Date.now();
+                      fullThinking += t;
+                      if (
+                        state.showThinking &&
+                        thinkingEl.children.length === 0
+                      ) {
+                        thinkingEl.innerHTML =
+                          renderThinkingStreaming(fullThinking);
+                      } else if (thinkingEl.children.length > 0) {
+                        const body = thinkingEl.querySelector(".thinking-body");
+                        if (body) body.textContent = fullThinking;
+                      }
+                      scrollToBottom();
+                    },
+                    appendContent: (t) => {
+                      fullContent += t;
+                      contentEl.innerHTML = renderMarkdown(fullContent);
+                      scrollToBottom();
+                    },
+                    finalize: () => {
+                      if (thinkingStart !== null)
+                        thinkingDuration = (Date.now() - thinkingStart) / 1000;
+                      if (thinkingEl.children.length > 0) {
+                        const think = thinkingEl.querySelector(".thinking");
+                        if (think) {
+                          think.dataset.state = "done";
+                          think.querySelector(".thinking-label").textContent =
+                            "Thought";
+                          think.querySelector(".thinking-time").textContent =
+                            thinkingDuration.toFixed(1) + "s";
+                          if (state.autoCollapseThinking)
+                            think.dataset.collapsed = "true";
+                        }
+                      }
+                    },
+                    onUsage: (u) => {
+                      state.current.total_tokens =
+                        (state.current.total_tokens || 0) +
+                        (u.total_tokens || 0);
+                      updateTokenCounter();
+                      if (!assistantEl.querySelector(".msg-tokens")) {
+                        const meta = assistantEl.querySelector(".msg-meta");
+                        if (meta)
+                          meta.insertAdjacentHTML(
+                            "beforeend",
+                            `<span class="msg-tokens">${u.estimated ? "~" : ""}${formatTokens(u.total_tokens)} tok</span>`,
+                          );
+                      }
+                    },
+                    onCriticStart: () => {
+                      const chip = document.createElement("div");
+                      chip.className = "critic-chip";
+                      chip.innerHTML = `<span class="critic-spin">◐</span> Critic reviewing…`;
+                      statusEl.appendChild(chip);
+                      scrollToBottom();
+                      return chip;
+                    },
+                    onCriticApproved: (chip, model) => {
+                      if (chip) chip.remove();
+                      const badge = document.createElement("div");
+                      badge.className = "critic-chip";
+                      badge.innerHTML = `✓ Critic approved`;
+                      badge.style.background = "rgba(34,197,94,0.08)";
+                      badge.style.borderColor = "rgba(34,197,94,0.25)";
+                      badge.style.color = "var(--green)";
+                      statusEl.appendChild(badge);
+                    },
+                    onCriticRejected: (chip, reason) => {
+                      if (chip) chip.remove();
+                      const box = document.createElement("div");
+                      box.className = "critic-concerns";
+                      box.innerHTML = `<strong>Critic concerns</strong>${escapeHtml(reason)}`;
+                      statusEl.appendChild(box);
+                    },
+                    onPatch: (diff, files, criticStatus, criticReason) => {
+                      const pp = document.createElement("div");
+                      pp.style.marginTop = "10px";
+                      pp.innerHTML = renderPatchPreview(
+                        diff,
+                        files,
+                        criticStatus,
+                        criticReason,
+                      );
+                      const inner = pp.firstElementChild;
+                      contentEl.appendChild(inner);
+                      scrollToBottom();
+                    },
+                    onPatchErrors: (errors, diff) => {
+                      const el = document.createElement("div");
+                      el.className = "patch-preview";
+                      el.style.marginTop = "10px";
+                      el.innerHTML = `
+                  <div class="patch-header"><h4>⚠️ Patch validation failed</h4></div>
+                  ${diff ? `<div class="patch-diff">${colorDiff(diff)}</div>` : ""}
+                  <div class="patch-errors">${errors.map(escapeHtml).join("<br>")}</div>`;
+                      contentEl.appendChild(el);
+                    },
+                    onStatus: (status, contentSnapshot) => {
+                      if (status && status.type !== "unknown") {
+                        const div = document.createElement("div");
+                        div.innerHTML = renderStatusPill(status);
+                        contentEl.appendChild(div);
+                        if (
+                          status.type === "plan_ready" &&
+                          state.current.mode === "plan"
+                        ) {
+                          const wrap = document.createElement("div");
+                          wrap.className = "plan-to-act-wrap";
+                          const btn = document.createElement("button");
+                          btn.className = "btn-plan-to-act";
+                          btn.textContent = "Use this plan →";
+                          btn.onclick = () =>
+                            useThisPlan(
+                              status.summary || "",
+                              contentSnapshot || fullContent,
+                            );
+                          const hint = document.createElement("span");
+                          hint.className = "plan-to-act-hint";
+                          hint.textContent =
+                            "Switch to Code mode with this plan prefilled";
+                          wrap.appendChild(btn);
+                          wrap.appendChild(hint);
+                          contentEl.appendChild(wrap);
+                        }
+                      }
+                    },
+                    onTool: (evt) => {
+                      const chip = document.createElement("span");
+                      chip.className =
+                        "tool-call" + (evt.error ? " error" : "");
+                      const icon = evt.type === "read" ? "📖" : "📁";
+                      const label = evt.error
+                        ? "not found"
+                        : evt.size
+                          ? `${evt.size}B`
+                          : "";
+                      chip.innerHTML = `<span class="tool-icon">${icon}</span>${evt.type} ${escapeHtml(evt.path)}${label ? ` <span class="tool-size">${label}</span>` : ""}`;
+                      contentEl.parentElement.insertBefore(chip, contentEl);
+                      scrollToBottom();
+                    },
+                  });
+                } catch (e) {
+                  console.error("Parse error", e, dl);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          if (err.name === "AbortError") {
+            contentEl.innerHTML += `<p style="color:var(--red);font-style:italic;margin-top:8px">[Stopped by user]</p>`;
+          } else {
+            contentEl.innerHTML += `<p style="color:var(--red);font-style:italic;margin-top:8px">Error: ${escapeHtml(err.message)}</p>`;
+          }
+        } finally {
+          state.streaming = false;
+          state.abortController = null;
+          updateInputUI();
+          await loadSession(state.current.id);
+          await fetchSessions();
+        }
+      }
+
+      function renderThinkingStreaming(thinking) {
+        return `<div class="thinking" data-state="streaming" data-collapsed="false">
+    <div class="thinking-header" onclick="this.parentElement.dataset.collapsed = this.parentElement.dataset.collapsed === 'true' ? 'false' : 'true'">
+      <span class="thinking-icon">◐</span>
+      <span class="thinking-label">Thinking…</span>
+      <span class="thinking-time"></span>
+      <button class="thinking-toggle">▾</button>
+    </div>
+    <div class="thinking-body">${escapeHtml(thinking)}</div>
+  </div>`;
+      }
+
+      function handleEvent(evt, ctx) {
+        switch (evt.event) {
+          case "thinking":
+            if (state.showThinking) ctx.appendThinking(evt.text);
+            break;
+          case "content":
+            ctx.appendContent(evt.text);
+            break;
+          case "usage":
+            ctx.onUsage(evt.usage);
+            break;
+          case "tool_call":
+          case "tool_result":
+            if (evt.type) ctx.onTool(evt);
+            break;
+          case "critic_start": {
+            const chip = ctx.onCriticStart();
+            ctx.setCriticChip(chip);
+            break;
+          }
+          case "critic_approved": {
+            ctx.onCriticApproved(ctx.getCriticChip(), evt.model);
+            ctx.setCriticChip(null);
+            break;
+          }
+          case "critic_rejected": {
+            ctx.onCriticRejected(ctx.getCriticChip(), evt.reason);
+            ctx.setCriticChip(null);
+            break;
+          }
+          case "patch_preview":
+            ctx.onPatch(
+              evt.diff,
+              evt.files,
+              evt.critic_status,
+              evt.critic_reason,
+            );
+            break;
+          case "patch_errors":
+            ctx.onPatchErrors(evt.errors, evt.diff);
+            break;
+          case "status":
+            ctx.onStatus(
+              evt.status,
+              ctx.contentEl ? ctx.contentEl.textContent : "",
+            );
+            break;
+          case "complete":
+            ctx.finalize();
+            break;
+          case "stopped":
+            ctx.finalize();
+            break;
+          case "error":
+            ctx.appendContent(`\n\n**Error:** ${evt.message}`);
+            break;
+        }
+      }
+
+      async function stopStreaming() {
+        if (!state.streaming || !state.current) return;
+        await fetch(`/api/chat/session/${state.current.id}/stop`, {
+          method: "POST",
+        });
+        if (state.abortController) state.abortController.abort();
+      }
+
+      // ─── Patch apply / reject ─────────────────────────────────────────────
+      async function applyPatches() {
+        if (!state.current) return;
+        const critic = state.current.pending_critic_status;
+        let confirmMsg =
+          "Apply patches and overwrite file(s)? Backups (.bak) will be created.";
+
+        if (critic === "rejected") {
+          const reason =
+            state.current.pending_critic_reason ||
+            "The critic raised concerns without providing a specific reason.";
+          confirmMsg =
+            "⚠️ The critic raised concerns about these patches:\n\n" +
+            reason +
+            "\n\nApply anyway? Backups (.bak) will be created.";
+        }
+
+        if (!confirm(confirmMsg)) return;
+        const r = await fetch(`/api/chat/session/${state.current.id}/apply`, {
+          method: "POST",
+        });
+        const d = await r.json();
+        if (r.ok) await loadSession(state.current.id);
+        else
+          alert(
+            "Apply failed:\n" +
+              (d.error || r.statusText) +
+              "\n\n" +
+              (d.log || ""),
+          );
+      }
+      window.applyPatches = applyPatches;
+      async function rejectPatches() {
+        if (!state.current) return;
+        await fetch(`/api/chat/session/${state.current.id}/reject`, {
+          method: "POST",
+        });
+        await loadSession(state.current.id);
+      }
+      window.rejectPatches = rejectPatches;
+      function retryLast() {
+        if (!state.current || state.streaming) return;
+        for (let i = state.current.messages.length - 1; i >= 0; i--) {
+          if (
+            state.current.messages[i].role === "user" &&
+            !state.current.messages[i].is_tool_result
+          ) {
+            const t = state.current.messages[i].content;
+            state.current.messages = state.current.messages.slice(0, i);
+            $("input").value = t;
+            autoResizeInput();
+            updateInputUI();
+            $("input").focus();
+            return;
+          }
+        }
+      }
+      window.retryLast = retryLast;
+      function copyText(btn, text) {
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = "Copied";
+          setTimeout(() => {
+            btn.textContent = "Copy";
+          }, 1200);
+        });
+      }
+      window.copyText = copyText;
+
+      // ─── Input ────────────────────────────────────────────────────────────
+      function autoResizeInput() {
+        const t = $("input");
+        t.style.height = "auto";
+        t.style.height = Math.min(t.scrollHeight, 240) + "px";
+      }
+      $("input").addEventListener("input", () => {
+        autoResizeInput();
+        updateInputUI();
+        maybeShowAutocomplete();
+      });
+      $("input").addEventListener("keydown", (e) => {
+        if (state.acVisible) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            state.acSelected = Math.min(
+              state.acSelected + 1,
+              state.acMatches.length - 1,
+            );
+            renderAutocompleteItems();
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            state.acSelected = Math.max(state.acSelected - 1, 0);
+            renderAutocompleteItems();
+            return;
+          }
+          if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+            e.preventDefault();
+            acceptAutocomplete();
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            hideAutocomplete();
+            return;
+          }
+        }
+        if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+          e.preventDefault();
+          sendMessage();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          if (state.streaming) stopStreaming();
+        }
+      });
+      function updateInputUI() {
+        const hasContent = $("input").value.trim().length > 0;
+        const canSend =
+          state.current &&
+          hasContent &&
+          !state.streaming &&
+          !state.updatingMode;
+        $("send-btn").disabled = !canSend;
+        $("send-btn").style.display = state.streaming ? "none" : "flex";
+        $("stop-btn").style.display = state.streaming ? "flex" : "none";
+        $("input").disabled = state.streaming || state.updatingMode;
+      }
+      $("send-btn").onclick = sendMessage;
+      $("stop-btn").onclick = stopStreaming;
+
+      // ─── @file autocomplete ───────────────────────────────────────────────
+      function getAutocompleteContext() {
+        const input = $("input");
+        const cursor = input.selectionStart;
+        const textBefore = input.value.slice(0, cursor);
+        const match = textBefore.match(/(?:^|\s)@([\w./_-]*)$/);
+        if (!match) return null;
+        return { prefix: match[1], atPos: cursor - match[1].length - 1 };
+      }
+      async function maybeShowAutocomplete() {
+        const ctx = getAutocompleteContext();
+        if (!ctx) {
+          hideAutocomplete();
+          return;
+        }
+
+        const repo = state.current
+          ? state.current.repo_root
+          : $("repo-input").value.trim();
+        if (!repo) {
+          hideAutocomplete();
+          return;
+        }
+
+        await refreshFileList();
+        if (!state.fileList) {
+          hideAutocomplete();
+          return;
+        }
+
+        const q = ctx.prefix.toLowerCase();
+        const matches = state.fileList
+          .filter((f) => !q || f.toLowerCase().includes(q))
+          .slice(0, 20);
+        if (matches.length === 0) {
+          hideAutocomplete();
+          return;
+        }
+        state.acVisible = true;
+        state.acMatches = matches;
+        state.acSelected = 0;
+        state.acStartPos = ctx.atPos;
+        renderAutocompleteItems();
+        $("autocomplete").classList.add("show");
+      }
+      function renderAutocompleteItems() {
+        const ac = $("autocomplete");
+        ac.innerHTML = "";
+        for (let i = 0; i < state.acMatches.length; i++) {
+          const el = document.createElement("div");
+          el.className =
+            "ac-item" + (i === state.acSelected ? " selected" : "");
+          el.innerHTML = `<span class="ac-icon">📄</span>${escapeHtml(state.acMatches[i])}`;
+          el.onmouseenter = () => {
+            state.acSelected = i;
+            renderAutocompleteItems();
+          };
+          el.onclick = () => acceptAutocomplete(i);
+          ac.appendChild(el);
+        }
+        const sel = ac.querySelector(".ac-item.selected");
+        if (sel) sel.scrollIntoView({ block: "nearest" });
+      }
+      function acceptAutocomplete(idx) {
+        if (!state.acVisible) return;
+        const i = idx !== undefined ? idx : state.acSelected;
+        const file = state.acMatches[i];
+        if (!file) return;
+        const input = $("input");
+        const cursor = input.selectionStart;
+        const before = input.value.slice(0, state.acStartPos);
+        const after = input.value.slice(cursor);
+        input.value = before + "@" + file + " " + after;
+        const newPos = state.acStartPos + 1 + file.length + 1;
+        input.setSelectionRange(newPos, newPos);
+        hideAutocomplete();
+        autoResizeInput();
+        updateInputUI();
+        input.focus();
+      }
+      function hideAutocomplete() {
+        state.acVisible = false;
+        state.acMatches = [];
+        $("autocomplete").classList.remove("show");
+      }
+
+      // ─── Voice ────────────────────────────────────────────────────────────
+      function initVoice() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+          $("mic-btn").style.display = "none";
+          return;
+        }
+        const rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-US";
+        rec.onresult = (e) => {
+          let interim = "",
+            final = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) final += t;
+            else interim += t;
+          }
+          const input = $("input");
+          if (final) {
+            state.voiceBaseText += final;
+            input.value = state.voiceBaseText;
+          } else input.value = state.voiceBaseText + interim;
+          autoResizeInput();
+          updateInputUI();
+        };
+        rec.onerror = () => stopVoice();
+        rec.onend = () => {
+          if (state.recording) {
+            try {
+              rec.start();
+            } catch (e) {}
+          }
+        };
+        state.recognition = rec;
+      }
+      function startVoice() {
+        if (!state.recognition) return;
+        state.voiceBaseText = $("input").value;
+        if (state.voiceBaseText && !state.voiceBaseText.endsWith(" "))
+          state.voiceBaseText += " ";
+        state.recording = true;
+        $("mic-btn").classList.add("recording");
+        try {
+          state.recognition.start();
+        } catch (e) {}
+      }
+      function stopVoice() {
+        state.recording = false;
+        $("mic-btn").classList.remove("recording");
+        if (state.recognition) {
+          try {
+            state.recognition.stop();
+          } catch (e) {}
+        }
+      }
+      $("mic-btn").onclick = () => {
+        if (state.recording) stopVoice();
+        else startVoice();
+      };
+
+      // ─── Search ───────────────────────────────────────────────────────────
+      $("session-search").addEventListener("input", () => {
+        state.searchQuery = $("session-search").value;
+        clearTimeout(state.searchDebounce);
+        state.searchDebounce = setTimeout(() => {
+          fetchSessions();
+        }, 250);
+      });
+
+      // ─── Settings ─────────────────────────────────────────────────────────
+      function openSettings() {
+        $("settings").classList.add("open");
+        $("settings-backdrop").classList.add("open");
+        if (state.current) {
+          $("repo-input").value = state.current.repo_root || "";
+          $("model-select").value = state.current.model || "";
+          $("temp-slider").value = state.current.temperature ?? 0.2;
+          $("temp-val").textContent = (+$("temp-slider").value).toFixed(2);
+          $("max-tokens").value = state.current.max_tokens ?? 4096;
+          $("critic-enabled").checked = state.current.critic_enabled !== false;
+        }
+      }
+      function closeSettings() {
+        $("settings").classList.remove("open");
+        $("settings-backdrop").classList.remove("open");
+      }
+      $("settings-btn").onclick = openSettings;
+      $("settings-close").onclick = closeSettings;
+      $("settings-backdrop").onclick = closeSettings;
+
+      $("settings-form").addEventListener("input", async () => {
+        const patch = {};
+        if (state.current) {
+          if ($("model-select").value !== state.current.model)
+            patch.model = $("model-select").value;
+          if (+$("temp-slider").value !== state.current.temperature)
+            patch.temperature = +$("temp-slider").value;
+          if (+$("max-tokens").value !== state.current.max_tokens)
+            patch.max_tokens = +$("max-tokens").value;
+          if (
+            $("critic-enabled").checked !==
+            (state.current.critic_enabled !== false)
+          )
+            patch.critic_enabled = $("critic-enabled").checked;
+          if (Object.keys(patch).length) await updateSession(patch);
+        }
+        state.showThinking = $("show-thinking").checked;
+        state.autoCollapseThinking = $("auto-collapse-thinking").checked;
+        state.autoScroll = $("auto-scroll").checked;
+        persisted.save();
+      });
+      $("temp-slider").addEventListener("input", () => {
+        $("temp-val").textContent = (+$("temp-slider").value).toFixed(2);
+      });
+
+      // ─── Mode toggle ──────────────────────────────────────────────────────
+      document.querySelectorAll("#mode-toggle button").forEach((b) => {
+        b.onclick = async () => {
+          if (!state.current) {
+            openNewChatModal();
+            return;
+          }
+          const cur =
+            state.current.mode === "act" ? "code" : state.current.mode;
+          if (cur === b.dataset.mode) return;
+          if (state.streaming) {
+            alert("Stop streaming before switching modes.");
+            return;
+          }
+          state.updatingMode = true;
+          updateInputUI();
+          await updateSession({ mode: b.dataset.mode });
+          state.updatingMode = false;
+          updateInputUI();
+          renderHeader();
+          renderMessages();
+          await fetchSessions();
+        };
+      });
+
+      // ─── Sidebar toggle ───────────────────────────────────────────────────
+      $("sidebar-toggle").onclick = () => {
+        if (window.innerWidth <= 768) {
+          $("sidebar").classList.toggle("mobile-open");
+        } else {
+          $("sidebar").classList.toggle("hidden");
+        }
+      };
+
+      // ─── New chat modal ───────────────────────────────────────────────────
+      function openNewChatModal() {
+        $("modal-repo").value = $("repo-input").value || "";
+        $("new-chat-modal").classList.add("open");
+        $("modal-repo").focus();
+      }
+      $("new-chat").onclick = openNewChatModal;
+      $("modal-cancel").onclick = () =>
+        $("new-chat-modal").classList.remove("open");
+      $("modal-create").onclick = async () => {
+        const repo = $("modal-repo").value.trim();
+        const mode = $("modal-mode").value;
+        if (!repo) {
+          alert("Enter a repository path.");
+          return;
+        }
+        const s = await createSession(repo, mode);
+        if (!s) return;
+        $("new-chat-modal").classList.remove("open");
+        $("repo-input").value = repo;
+        await fetchSessions();
+        await loadSession(s.id);
+      };
+
+      // ─── Keyboard shortcuts ───────────────────────────────────────────────
+      document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+          e.preventDefault();
+          openNewChatModal();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+          e.preventDefault();
+          $("sidebar-toggle").click();
+        }
+        if (e.key === "Escape") {
+          if ($("settings").classList.contains("open")) closeSettings();
+          if ($("new-chat-modal").classList.contains("open"))
+            $("new-chat-modal").classList.remove("open");
+        }
+      });
+
+      // ─── Export ───────────────────────────────────────────────────────────
+      $("export-btn").onclick = () => {
+        if (!state.current) return;
+        let md = `# ${state.current.title}\n\n`;
+        md += `**Repo:** \`${state.current.repo_root}\`  \n**Mode:** ${state.current.mode}  \n`;
+        md += `**Created:** ${state.current.created_at}  \n**Total tokens:** ${state.current.total_tokens || 0}\n\n---\n\n`;
+        for (const m of state.current.messages) {
+          if (m.role === "user" && !m.is_tool_result)
+            md += `## User\n\n${m.content}\n\n`;
+          else if (m.role === "assistant") {
+            if (m.thinking)
+              md += `<details><summary>Thinking</summary>\n\n${m.thinking}\n\n</details>\n\n`;
+            md += `## Assistant\n\n${m.content}\n\n`;
+            if (m.status) md += `_Status: ${m.status.type}_\n\n`;
+          } else if (m.role === "system") md += `> ${m.content}\n\n`;
+        }
+        const blob = new Blob([md], { type: "text/markdown" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${(state.current.title || "chat").slice(0, 40)}.md`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+
+      // ─── Rename ───────────────────────────────────────────────────────────
+      $("chat-title").onclick = () => {
+        if (!state.current) return;
+        const cur = state.current.title;
+        const t = prompt("Rename session:", cur);
+        if (t !== null && t !== cur)
+          updateSession({ title: t }).then(() => {
+            renderHeader();
+            fetchSessions();
+          });
+      };
+
+      // ─── Boot ─────────────────────────────────────────────────────────────
+      (async function init() {
+        persisted.load();
+        initVoice();
+        await fetchSessions();
+        const params = new URLSearchParams(location.search);
+        if (params.get("session")) await loadSession(params.get("session"));
+        updateInputUI();
+        $("input").focus();
+        setInterval(() => {
+          if (!state.streaming) fetchSessions();
+        }, 10000);
+      })();
+    </script>
+  </body>
+</html>

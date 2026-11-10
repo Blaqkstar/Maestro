@@ -1,0 +1,271 @@
+{
+  "ensemble": "serving",
+  "status": "completed_with_errors",
+  "has_errors": true,
+  "input": {
+    "data": "{\"task\": \"test\", \"context\": \"user: testing\", \"wrote_path\": \"\", \"wrote_content\": \"\", \"write_count\": 0, \"recall_ledger\": [], \"previous_ask\": {\"ask\": \"testing\", \"outcome\": \"\", \"path\": \"\", \"reason\": \"\"}, \"self_reference\": true, \"read_paths\": []}"
+  },
+  "results": {
+    "classify": {
+      "response": "{\"target\": \"\", \"kind\": \"\", \"file\": \"solution.py\", \"task\": \"test\", \"dispatch_input\": \"Conversation so far:\\nuser: testing\\n\\nCurrent request: test\", \"build\": false, \"needs_decider\": true, \"needs_files\": [], \"read_failed\": \"\", \"needs_run\": \"\", \"needs_glob\": \"\", \"glob_failed\": \"\", \"needs_self_files\": [], \"needs_grep\": \"\", \"defer_pick\": false, \"pick_input\": \"\", \"pick_menu\": {}, \"not_grounded\": \"\", \"not_grounded_reason\": \"\", \"recall_answer\": \"\", \"is_build_ask\": false, \"chain\": \"decider\", \"step_index\": 0}",
+      "status": "success",
+      "model_substituted": false,
+      "outcome": "succeeded",
+      "has_errors": false,
+      "agent_requests": []
+    },
+    "pick": {
+      "response": null,
+      "status": "skipped",
+      "model_substituted": false,
+      "outcome": "skipped_by_guard",
+      "has_errors": false
+    },
+    "decide": {
+      "response": null,
+      "status": "failed",
+      "model_substituted": false,
+      "error": "All connection attempts failed",
+      "outcome": "failed",
+      "has_errors": true
+    },
+    "resolve": {
+      "response": "{\"target\": \"\", \"kind\": \"\", \"file\": \"solution.py\", \"dispatch_input\": \"Conversation so far:\\nuser: testing\\n\\nCurrent request: test\", \"build\": false, \"needs_files\": [], \"read_failed\": \"\", \"needs_run\": \"\", \"needs_glob\": \"\", \"glob_failed\": \"\", \"needs_self_files\": [], \"needs_grep\": \"\", \"picked\": \"\", \"not_grounded\": \"\", \"not_grounded_reason\": \"\", \"recall_answer\": \"\", \"is_build_ask\": false}",
+      "status": "success",
+      "model_substituted": false,
+      "outcome": "succeeded",
+      "has_errors": false,
+      "agent_requests": []
+    },
+    "seat": {
+      "response": null,
+      "status": "failed",
+      "model_substituted": false,
+      "error": "Ensemble '' not found",
+      "outcome": "failed",
+      "has_errors": true
+    },
+    "seat_contract": {
+      "response": "{\"seat_admitted\": true, \"seat_contract_reason\": \"\"}",
+      "status": "success",
+      "model_substituted": false,
+      "outcome": "succeeded",
+      "has_errors": false,
+      "agent_requests": []
+    },
+    "shape": {
+      "response": "{\"build\": false, \"file\": \"solution.py\", \"content\": \"\", \"accept\": null, \"accept_reason\": \"\", \"seat_admitted\": true, \"seat_contract_reason\": \"\", \"needs_files\": [], \"read_failed\": \"\", \"needs_run\": \"\", \"needs_glob\": \"\", \"glob_failed\": \"\", \"needs_self_files\": [], \"needs_grep\": \"\", \"picked\": \"\", \"not_grounded\": \"\", \"not_grounded_reason\": \"\", \"recall_answer\": \"\", \"is_build_ask\": false, \"routing_failed\": \"serving pipeline error: no readable routing decision this turn; nothing was built or written\", \"seat_gate_failed\": \"\", \"seat_failed\": \"failed\"}",
+      "status": "success",
+      "model_substituted": false,
+      "outcome": "succeeded",
+      "has_errors": false,
+      "agent_requests": []
+    },
+    "form_gate": {
+      "response": "{\"build\": false, \"file\": \"solution.py\", \"content\": \"\", \"valid\": true, \"reason\": \"ok\", \"accept\": null, \"accept_reason\": \"\", \"seat_admitted\": true, \"seat_contract_reason\": \"\", \"needs_files\": [], \"read_failed\": \"\", \"needs_run\": \"\", \"needs_glob\": \"\", \"glob_failed\": \"\", \"needs_self_files\": [], \"needs_grep\": \"\", \"picked\": \"\", \"not_grounded\": \"\", \"not_grounded_reason\": \"\", \"recall_answer\": \"\", \"is_build_ask\": false, \"routing_failed\": \"serving pipeline error: no readable routing decision this turn; nothing was built or written\", \"node_failed\": \"\", \"seat_gate_failed\": \"\", \"seat_failed\": \"failed\"}",
+      "status": "success",
+      "model_substituted": false,
+      "outcome": "succeeded",
+      "has_errors": false,
+      "agent_requests": []
+    },
+    "emit": {
+      "response": "{\"finish\": true, \"content\": \"Refused: serving pipeline error: no readable routing decision this turn; nothing was built or written\"}",
+      "status": "success",
+      "model_substituted": false,
+      "outcome": "succeeded",
+      "has_errors": false,
+      "agent_requests": []
+    }
+  },
+  "metadata": {
+    "agents_used": 9,
+    "started_at": 1794096267.937276,
+    "duration": "5.94s",
+    "completed_at": 1794096273.881567,
+    "usage": {
+      "agents": {},
+      "totals": {
+        "total_tokens": 0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "total_cost_usd": 0.0,
+        "total_duration_ms": 0,
+        "agents_count": 0
+      }
+    },
+    "adaptive_resource_management": {
+      "adaptive_used": false,
+      "management_type": "user_configured",
+      "concurrency_decisions": [],
+      "resource_metrics": [
+        {
+          "cpu_percent": 0.0,
+          "memory_percent": 74.5,
+          "circuit_breaker_state": "N/A",
+          "measurement_point": "final_fallback"
+        }
+      ],
+      "execution_metrics": {
+        "peak_cpu": 0.0,
+        "avg_cpu": 0.0,
+        "peak_memory": 74.5,
+        "avg_memory": 74.5,
+        "sample_count": 1,
+        "raw_cpu_samples": [
+          0.0
+        ],
+        "raw_memory_samples": [
+          74.5
+        ]
+      },
+      "phase_metrics": [
+        {
+          "phase_index": 0,
+          "phase_name": "phase_0",
+          "agent_count": 1,
+          "phase_start_time": 1794096267.937276,
+          "agent_names": [
+            "classify"
+          ],
+          "start_time": 1794096267.937276,
+          "duration_seconds": 0.8763341903686523,
+          "end_time": 1794096268.81361,
+          "agents_completed": 1,
+          "peak_cpu": 47.8,
+          "avg_cpu": 35.3375,
+          "peak_memory": 74.6,
+          "avg_memory": 74.5875,
+          "sample_count": 8
+        },
+        {
+          "phase_index": 1,
+          "phase_name": "phase_1",
+          "agent_count": 1,
+          "phase_start_time": 1794096268.81361,
+          "agent_names": [
+            "decide"
+          ],
+          "start_time": 1794096268.81361,
+          "duration_seconds": 2.105717658996582,
+          "end_time": 1794096270.9193277,
+          "agents_completed": 1,
+          "peak_cpu": 41.6,
+          "avg_cpu": 21.2421052631579,
+          "peak_memory": 74.6,
+          "avg_memory": 74.5894736842105,
+          "sample_count": 19
+        },
+        {
+          "phase_index": 2,
+          "phase_name": "phase_2",
+          "agent_count": 1,
+          "phase_start_time": 1794096270.9193277,
+          "agent_names": [
+            "resolve"
+          ],
+          "start_time": 1794096270.9193277,
+          "duration_seconds": 1.6511621475219727,
+          "end_time": 1794096272.57049,
+          "agents_completed": 1,
+          "peak_cpu": 27.4,
+          "avg_cpu": 17.259999999999998,
+          "peak_memory": 74.6,
+          "avg_memory": 74.6,
+          "sample_count": 15
+        },
+        {
+          "phase_index": 3,
+          "phase_name": "phase_3",
+          "agent_count": 1,
+          "phase_start_time": 1794096272.5717885,
+          "agent_names": [
+            "seat"
+          ],
+          "start_time": 1794096272.5717885,
+          "duration_seconds": 0.0010004043579101562,
+          "end_time": 1794096272.675747,
+          "agents_completed": 1,
+          "peak_cpu": 0.0,
+          "avg_cpu": 0.0,
+          "peak_memory": 0.0,
+          "avg_memory": 0.0,
+          "sample_count": 0
+        },
+        {
+          "phase_index": 4,
+          "phase_name": "phase_4",
+          "agent_count": 1,
+          "phase_start_time": 1794096272.675747,
+          "agent_names": [
+            "seat_contract"
+          ],
+          "start_time": 1794096272.675747,
+          "duration_seconds": 0.9294674396514893,
+          "end_time": 1794096273.6052144,
+          "agents_completed": 1,
+          "peak_cpu": 28.2,
+          "avg_cpu": 17.1,
+          "peak_memory": 74.6,
+          "avg_memory": 74.53750000000001,
+          "sample_count": 8
+        },
+        {
+          "phase_index": 5,
+          "phase_name": "phase_5",
+          "agent_count": 1,
+          "phase_start_time": 1794096273.6052144,
+          "agent_names": [
+            "shape"
+          ],
+          "start_time": 1794096273.6052144,
+          "duration_seconds": 0.09553050994873047,
+          "end_time": 1794096273.7007449,
+          "agents_completed": 1,
+          "peak_cpu": 14.7,
+          "avg_cpu": 14.7,
+          "peak_memory": 74.5,
+          "avg_memory": 74.5,
+          "sample_count": 1
+        },
+        {
+          "phase_index": 6,
+          "phase_name": "phase_6",
+          "agent_count": 1,
+          "phase_start_time": 1794096273.7007449,
+          "agent_names": [
+            "form_gate"
+          ],
+          "start_time": 1794096273.7007449,
+          "duration_seconds": 0.08585476875305176,
+          "end_time": 1794096273.7865996,
+          "agents_completed": 1,
+          "peak_cpu": 7.5,
+          "avg_cpu": 7.5,
+          "peak_memory": 74.5,
+          "avg_memory": 74.5,
+          "sample_count": 1
+        },
+        {
+          "phase_index": 7,
+          "phase_name": "phase_7",
+          "agent_count": 1,
+          "phase_start_time": 1794096273.7875988,
+          "agent_names": [
+            "emit"
+          ],
+          "start_time": 1794096273.7875988,
+          "duration_seconds": 0.09292078018188477,
+          "end_time": 1794096273.8805196,
+          "agents_completed": 1,
+          "peak_cpu": 22.7,
+          "avg_cpu": 22.7,
+          "peak_memory": 74.5,
+          "avg_memory": 74.5,
+          "sample_count": 1
+        }
+      ]
+    }
+  },
+  "deliverable": "{\"finish\": true, \"content\": \"Refused: serving pipeline error: no readable routing decision this turn; nothing was built or written\"}"
+}

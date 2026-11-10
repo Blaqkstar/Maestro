@@ -1,0 +1,491 @@
+2026-11-09 17:35:10 [DEBUG]
+ Received request: POST to /v1/chat/completions with body  {
+  "model": "qwen.qwen3-coder-30b-a3b-instruct",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert software engineer editing files.... <Truncated in logs> ...smoke-test.py\nstart-orchestra.ps1\nsystem-rules.md\n"
+    },
+    {
+      "role": "user",
+      "content": "Please analyze my entire codebase and create a com... <Truncated in logs> ...e about anything, please ask clarifying questions.",
+      "timestamp": "2026-11-09T17:35:06.860431"
+    }
+  ],
+  "stream": true,
+  "temperature": 0.1,
+  "max_tokens": 32768,
+  "stream_options": {
+    "include_usage": true
+  }
+}
+2026-11-09 17:35:10  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Running chat completion on conversation with 2 messages.
+2026-11-09 17:35:10  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Streaming response...
+2026-11-09 17:35:10 [DEBUG]
+ 34.33.132.175 I slot get_availabl: id  2 | task -1 | selected slot by LCP similarity, f_sim_best = 0.803 (> 0.100 thold), f_keep = 0.045
+2026-11-09 17:35:11 [DEBUG]
+ 34.33.407.632 I slot launch_slot_: id  2 | task 9251 | processing task, is_child = 0
+2026-11-09 17:35:11  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 0.0%
+2026-11-09 17:35:12  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 100.0%
+2026-11-09 17:35:16 [DEBUG]
+ 34.38.514.020 I slot print_timing: id  2 | task 9251 | n_gen =    100, tg =  24.56 t/s, tg_3s =  24.80 t/s
+2026-11-09 17:35:18 [DEBUG]
+ 34.41.204.329 I slot print_timing: id  2 | task 9251 | prompt eval time =    1074.59 ms /   254 tokens (    4.23 ms per token,   236.37 tokens per second)
+34.41.204.334 I slot print_timing: id  2 | task 9251 |        eval time =    6721.79 ms /   170 tokens (   39.77 ms per token,    25.14 tokens per second)
+34.41.204.336 I slot print_timing: id  2 | task 9251 |       total time =    7796.37 ms /   424 tokens
+34.41.204.337 I slot print_timing: id  2 | task 9251 |    graphs reused =       9215
+34.41.204.338 I slot print_timing: id  2 | task 9251 |   graph reallocs =        193    /     0        (same size) / (changed size)
+2026-11-09 17:35:18  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Finished streaming response
+2026-11-09 17:35:18 [DEBUG]
+ 34.41.204.501 I slot      release: id  2 | task 9251 | stop processing: n_tokens = 1461, truncated = 0
+2026-11-09 17:35:20 [DEBUG]
+ Received request: POST to /v1/chat/completions with body  {
+  "model": "qwen.qwen3-coder-30b-a3b-instruct",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert software engineer editing files.... <Truncated in logs> ...smoke-test.py\nstart-orchestra.ps1\nsystem-rules.md\n"
+    },
+    {
+      "role": "user",
+      "content": "Please analyze my entire codebase and create a com... <Truncated in logs> ...e about anything, please ask clarifying questions.",
+      "timestamp": "2026-11-09T17:35:06.860431"
+    },
+    {
+      "role": "assistant",
+      "content": "I'll help you create a comprehensive README.md for... <Truncated in logs> ...smoke-test.py\">>>\n<<<READ path=\"patch_apply.py\">>>",
+      "thinking": "",
+      "usage_total": 1462,
+      "timestamp": "2026-11-09T17:35:18.941380"
+    },
+    {
+      "role": "user",
+      "content": "Runtime fetched:\n\n=== README.md ===\n# SWE AI Orche... <Truncated in logs> ...atch_apply.py ===\n<skipped: context limit reached>",
+      "is_tool_result": true,
+      "timestamp": "2026-11-09T17:35:18.949896"
+    }
+  ],
+  "stream": true,
+  "temperature": 0.1,
+  "max_tokens": 32768,
+  "stream_options": {
+    "include_usage": true
+  }
+}
+2026-11-09 17:35:20  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Running chat completion on conversation with 4 messages.
+2026-11-09 17:35:20  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Streaming response...
+2026-11-09 17:35:21 [DEBUG]
+ 34.43.326.667 I slot get_availabl: id  3 | task -1 | selected slot by LRU, n_tokens = 0, t_last = -1
+2026-11-09 17:35:21 [DEBUG]
+ 34.43.344.980 I slot launch_slot_: id  3 | task 9422 | processing task, is_child = 0
+2026-11-09 17:35:21  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 0.0%
+2026-11-09 17:35:22  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 1.4%
+2026-11-09 17:35:23  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 2.8%
+2026-11-09 17:35:23  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 4.1%
+2026-11-09 17:35:24 [DEBUG]
+ 34.47.123.333 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   1024, progress = 0.10, t =   3.77 s / 271.94 tokens per second
+2026-11-09 17:35:24  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 5.5%
+2026-11-09 17:35:25 [DEBUG]
+ 34.48.056.523 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   1280, progress = 0.12, t =   4.70 s / 272.41 tokens per second
+2026-11-09 17:35:25  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 6.9%
+2026-11-09 17:35:26 [DEBUG]
+ 34.48.985.708 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   1536, progress = 0.13, t =   5.63 s / 272.92 tokens per second
+2026-11-09 17:35:26  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 8.3%
+2026-11-09 17:35:27 [DEBUG]
+ 34.49.911.567 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   1792, progress = 0.14, t =   6.55 s / 273.43 tokens per second
+2026-11-09 17:35:27  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 9.6%
+2026-11-09 17:35:28 [DEBUG]
+ 34.50.927.818 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   2048, progress = 0.16, t =   7.57 s / 270.54 tokens per second
+2026-11-09 17:35:28  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 11.0%
+2026-11-09 17:35:29 [DEBUG]
+ 34.52.056.589 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   2304, progress = 0.17, t =   8.70 s / 264.86 tokens per second
+2026-11-09 17:35:29  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 12.4%
+2026-11-09 17:35:30 [DEBUG]
+ 34.53.214.288 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   2560, progress = 0.18, t =   9.86 s / 259.73 tokens per second
+2026-11-09 17:35:30  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 13.8%
+2026-11-09 17:35:32 [DEBUG]
+ 34.54.312.469 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   2816, progress = 0.20, t =  10.95 s / 257.06 tokens per second
+2026-11-09 17:35:32  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 15.1%
+2026-11-09 17:35:33 [DEBUG]
+ 34.55.430.998 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   3072, progress = 0.21, t =  12.07 s / 254.45 tokens per second
+2026-11-09 17:35:33  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 16.5%
+2026-11-09 17:35:34 [DEBUG]
+ 34.56.565.704 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   3328, progress = 0.22, t =  13.21 s / 251.97 tokens per second
+2026-11-09 17:35:34  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 17.9%
+2026-11-09 17:35:35 [DEBUG]
+ 34.57.652.181 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   3584, progress = 0.24, t =  14.29 s / 250.73 tokens per second
+2026-11-09 17:35:35  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 19.3%
+2026-11-09 17:35:36 [DEBUG]
+ 34.58.754.620 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   3840, progress = 0.25, t =  15.40 s / 249.40 tokens per second
+2026-11-09 17:35:36  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 20.6%
+2026-11-09 17:35:37 [DEBUG]
+ 34.59.890.315 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   4096, progress = 0.26, t =  16.53 s / 247.75 tokens per second
+2026-11-09 17:35:37  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 22.0%
+2026-11-09 17:35:38 [DEBUG]
+ 35.00.979.613 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   4352, progress = 0.27, t =  17.62 s / 246.97 tokens per second
+2026-11-09 17:35:38  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 23.4%
+2026-11-09 17:35:39 [DEBUG]
+ 35.02.070.297 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   4608, progress = 0.29, t =  18.71 s / 246.25 tokens per second
+2026-11-09 17:35:39  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 24.8%
+2026-11-09 17:35:40 [DEBUG]
+ 35.03.206.687 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   4864, progress = 0.30, t =  19.85 s / 245.05 tokens per second
+2026-11-09 17:35:40  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 26.1%
+2026-11-09 17:35:42 [DEBUG]
+ 35.04.271.991 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   5120, progress = 0.31, t =  20.91 s / 244.81 tokens per second
+2026-11-09 17:35:42  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 27.5%
+2026-11-09 17:35:43 [DEBUG]
+ 35.05.382.754 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   5376, progress = 0.33, t =  22.02 s / 244.09 tokens per second
+2026-11-09 17:35:43  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 28.9%
+2026-11-09 17:35:44 [DEBUG]
+ 35.06.473.581 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   5632, progress = 0.34, t =  23.12 s / 243.64 tokens per second
+2026-11-09 17:35:44  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 30.3%
+2026-11-09 17:35:45 [DEBUG]
+ 35.07.573.493 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   5888, progress = 0.35, t =  24.22 s / 243.15 tokens per second
+2026-11-09 17:35:45  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 31.7%
+2026-11-09 17:35:46 [DEBUG]
+ 35.08.721.774 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   6144, progress = 0.37, t =  25.36 s / 242.23 tokens per second
+2026-11-09 17:35:46  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 33.0%
+2026-11-09 17:35:47  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 34.4%
+2026-11-09 17:35:47 [DEBUG]
+ 35.09.816.756 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   6400, progress = 0.38, t =  26.46 s / 241.88 tokens per second
+2026-11-09 17:35:48 [DEBUG]
+ 35.10.847.812 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   6656, progress = 0.39, t =  27.49 s / 242.12 tokens per second
+2026-11-09 17:35:48  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 35.8%
+2026-11-09 17:35:49 [DEBUG]
+ 35.11.784.097 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   6912, progress = 0.40, t =  28.43 s / 243.15 tokens per second
+2026-11-09 17:35:49  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 37.2%
+2026-11-09 17:35:50 [DEBUG]
+ 35.12.959.627 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   7168, progress = 0.42, t =  29.60 s / 242.15 tokens per second
+2026-11-09 17:35:50  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 38.5%
+2026-11-09 17:35:51 [DEBUG]
+ 35.14.022.461 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   7424, progress = 0.43, t =  30.66 s / 242.10 tokens per second
+2026-11-09 17:35:51  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 39.9%
+2026-11-09 17:35:52 [DEBUG]
+ 35.15.155.223 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   7680, progress = 0.44, t =  31.80 s / 241.53 tokens per second
+2026-11-09 17:35:52  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 41.3%
+2026-11-09 17:35:54 [DEBUG]
+ 35.16.291.539 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   7936, progress = 0.46, t =  32.93 s / 240.97 tokens per second
+2026-11-09 17:35:54  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 42.7%
+2026-11-09 17:35:55 [DEBUG]
+ 35.17.347.780 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   8192, progress = 0.47, t =  33.99 s / 241.01 tokens per second
+2026-11-09 17:35:55  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 44.0%
+2026-11-09 17:35:56 [DEBUG]
+ 35.18.384.019 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   8448, progress = 0.48, t =  35.03 s / 241.19 tokens per second
+2026-11-09 17:35:56  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 45.4%
+2026-11-09 17:35:57 [DEBUG]
+ 35.19.531.875 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   8704, progress = 0.50, t =  36.17 s / 240.61 tokens per second
+2026-11-09 17:35:57  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 46.8%
+2026-11-09 17:35:58 [DEBUG]
+ 35.20.647.105 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   8960, progress = 0.51, t =  37.29 s / 240.28 tokens per second
+2026-11-09 17:35:58  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 48.2%
+2026-11-09 17:35:59 [DEBUG]
+ 35.21.721.759 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   9216, progress = 0.52, t =  38.36 s / 240.23 tokens per second
+2026-11-09 17:35:59  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 49.5%
+2026-11-09 17:36:00 [DEBUG]
+ 35.22.890.233 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   9472, progress = 0.54, t =  39.53 s / 239.60 tokens per second
+2026-11-09 17:36:00  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 50.9%
+2026-11-09 17:36:01 [DEBUG]
+ 35.23.996.516 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   9728, progress = 0.55, t =  40.64 s / 239.38 tokens per second
+2026-11-09 17:36:01  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 52.3%
+2026-11-09 17:36:02 [DEBUG]
+ 35.25.085.899 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =   9984, progress = 0.56, t =  41.73 s / 239.26 tokens per second
+2026-11-09 17:36:02  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 53.7%
+2026-11-09 17:36:03 [DEBUG]
+ 35.26.144.150 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  10240, progress = 0.57, t =  42.79 s / 239.33 tokens per second
+2026-11-09 17:36:03  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 55.0%
+2026-11-09 17:36:05 [DEBUG]
+ 35.27.285.468 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  10496, progress = 0.59, t =  43.93 s / 238.94 tokens per second
+2026-11-09 17:36:05  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 56.4%
+2026-11-09 17:36:06 [DEBUG]
+ 35.28.446.483 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  10752, progress = 0.60, t =  45.09 s / 238.46 tokens per second
+2026-11-09 17:36:06  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 57.8%
+2026-11-09 17:36:07 [DEBUG]
+ 35.29.531.996 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  11008, progress = 0.61, t =  46.17 s / 238.40 tokens per second
+2026-11-09 17:36:07  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 59.2%
+2026-11-09 17:36:08 [DEBUG]
+ 35.30.721.972 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  11264, progress = 0.63, t =  47.36 s / 237.82 tokens per second
+2026-11-09 17:36:08  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 60.5%
+2026-11-09 17:36:09 [DEBUG]
+ 35.31.864.959 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  11520, progress = 0.64, t =  48.51 s / 237.49 tokens per second
+2026-11-09 17:36:09  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 61.9%
+2026-11-09 17:36:10 [DEBUG]
+ 35.33.057.282 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  11776, progress = 0.65, t =  49.70 s / 236.94 tokens per second
+2026-11-09 17:36:10  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 63.3%
+2026-11-09 17:36:11 [DEBUG]
+ 35.34.252.466 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  12032, progress = 0.67, t =  50.89 s / 236.41 tokens per second
+2026-11-09 17:36:11  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 64.7%
+2026-11-09 17:36:13 [DEBUG]
+ 35.35.364.834 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  12288, progress = 0.68, t =  52.01 s / 236.28 tokens per second
+2026-11-09 17:36:13  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 66.1%
+2026-11-09 17:36:14 [DEBUG]
+ 35.36.501.847 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  12544, progress = 0.69, t =  53.14 s / 236.04 tokens per second
+2026-11-09 17:36:14  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 67.4%
+2026-11-09 17:36:15 [DEBUG]
+ 35.37.687.054 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  12800, progress = 0.70, t =  54.33 s / 235.60 tokens per second
+2026-11-09 17:36:15  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 68.8%
+2026-11-09 17:36:16 [DEBUG]
+ 35.38.848.689 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  13056, progress = 0.72, t =  55.49 s / 235.28 tokens per second
+2026-11-09 17:36:16  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 70.2%
+2026-11-09 17:36:17 [DEBUG]
+ 35.39.979.153 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  13312, progress = 0.73, t =  56.62 s / 235.11 tokens per second
+2026-11-09 17:36:17  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 71.6%
+2026-11-09 17:36:18 [DEBUG]
+ 35.41.163.927 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  13568, progress = 0.74, t =  57.81 s / 234.72 tokens per second
+2026-11-09 17:36:18  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 72.9%
+2026-11-09 17:36:20 [DEBUG]
+ 35.42.325.899 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  13824, progress = 0.76, t =  58.97 s / 234.43 tokens per second
+2026-11-09 17:36:20  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 74.3%
+2026-11-09 17:36:21 [DEBUG]
+ 35.43.557.368 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  14080, progress = 0.77, t =  60.20 s / 233.89 tokens per second
+2026-11-09 17:36:21  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 75.7%
+2026-11-09 17:36:22 [DEBUG]
+ 35.44.644.930 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  14336, progress = 0.78, t =  61.29 s / 233.92 tokens per second
+2026-11-09 17:36:22  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 77.1%
+2026-11-09 17:36:23 [DEBUG]
+ 35.45.831.997 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  14592, progress = 0.80, t =  62.47 s / 233.57 tokens per second
+2026-11-09 17:36:23  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 78.4%
+2026-11-09 17:36:24 [DEBUG]
+ 35.46.966.916 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  14848, progress = 0.81, t =  63.61 s / 233.43 tokens per second
+2026-11-09 17:36:24  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 79.8%
+2026-11-09 17:36:25 [DEBUG]
+ 35.48.142.900 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  15104, progress = 0.82, t =  64.79 s / 233.14 tokens per second
+2026-11-09 17:36:25  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 81.2%
+2026-11-09 17:36:27 [DEBUG]
+ 35.49.280.859 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  15360, progress = 0.83, t =  65.92 s / 233.00 tokens per second
+2026-11-09 17:36:27  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 82.6%
+2026-11-09 17:36:28 [DEBUG]
+ 35.50.443.738 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  15616, progress = 0.85, t =  67.09 s / 232.78 tokens per second
+2026-11-09 17:36:28  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 83.9%
+2026-11-09 17:36:29 [DEBUG]
+ 35.51.540.109 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  15872, progress = 0.86, t =  68.18 s / 232.79 tokens per second
+2026-11-09 17:36:29  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 85.3%
+2026-11-09 17:36:30 [DEBUG]
+ 35.52.650.691 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  16128, progress = 0.87, t =  69.29 s / 232.75 tokens per second
+2026-11-09 17:36:30  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 86.7%
+2026-11-09 17:36:31 [DEBUG]
+ 35.53.870.451 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  16384, progress = 0.89, t =  70.51 s / 232.36 tokens per second
+2026-11-09 17:36:31  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 88.1%
+2026-11-09 17:36:32 [DEBUG]
+ 35.55.064.976 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  16640, progress = 0.90, t =  71.71 s / 232.05 tokens per second
+2026-11-09 17:36:32  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 89.4%
+2026-11-09 17:36:33 [DEBUG]
+ 35.56.227.707 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  16896, progress = 0.91, t =  72.87 s / 231.87 tokens per second
+2026-11-09 17:36:33  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 90.8%
+2026-11-09 17:36:35 [DEBUG]
+ 35.57.448.082 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  17152, progress = 0.93, t =  74.09 s / 231.50 tokens per second
+2026-11-09 17:36:35  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 92.2%
+2026-11-09 17:36:36 [DEBUG]
+ 35.58.618.148 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  17408, progress = 0.94, t =  75.26 s / 231.30 tokens per second
+2026-11-09 17:36:36  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 93.6%
+2026-11-09 17:36:37 [DEBUG]
+ 35.59.798.976 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  17664, progress = 0.95, t =  76.44 s / 231.08 tokens per second
+2026-11-09 17:36:37  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 95.0%
+2026-11-09 17:36:38 [DEBUG]
+ 36.01.000.175 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  17920, progress = 0.97, t =  77.64 s / 230.80 tokens per second
+2026-11-09 17:36:38  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 96.3%
+2026-11-09 17:36:39 [DEBUG]
+ 36.02.094.504 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  18176, progress = 0.98, t =  78.74 s / 230.85 tokens per second
+2026-11-09 17:36:39  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 97.7%
+2026-11-09 17:36:40 [DEBUG]
+ 36.03.262.898 I slot print_timing: id  3 | task 9422 | prompt processing, n_tokens =  18432, progress = 0.99, t =  79.91 s / 230.67 tokens per second
+2026-11-09 17:36:40  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 99.1%
+2026-11-09 17:36:42  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Prompt processing progress: 100.0%
+2026-11-09 17:36:46 [DEBUG]
+ 36.08.757.610 I slot print_timing: id  3 | task 9422 | n_gen =    100, tg =  22.67 t/s, tg_3s =  22.90 t/s
+2026-11-09 17:36:49 [DEBUG]
+ 36.11.800.301 I slot print_timing: id  3 | task 9422 | n_gen =    167, tg =  22.40 t/s, tg_3s =  22.02 t/s
+2026-11-09 17:36:52 [DEBUG]
+ 36.14.805.064 I slot print_timing: id  3 | task 9422 | n_gen =    235, tg =  22.47 t/s, tg_3s =  22.63 t/s
+2026-11-09 17:36:55 [DEBUG]
+ 36.17.829.326 I slot print_timing: id  3 | task 9422 | n_gen =    304, tg =  22.55 t/s, tg_3s =  22.82 t/s
+2026-11-09 17:36:58 [DEBUG]
+ 36.20.857.940 I slot print_timing: id  3 | task 9422 | n_gen =    372, tg =  22.53 t/s, tg_3s =  22.45 t/s
+2026-11-09 17:37:01 [DEBUG]
+ 36.23.883.265 I slot print_timing: id  3 | task 9422 | n_gen =    440, tg =  22.52 t/s, tg_3s =  22.48 t/s
+2026-11-09 17:37:04 [DEBUG]
+ 36.26.897.371 I slot print_timing: id  3 | task 9422 | n_gen =    508, tg =  22.53 t/s, tg_3s =  22.56 t/s
+2026-11-09 17:37:07 [DEBUG]
+ 36.29.905.626 I slot print_timing: id  3 | task 9422 | n_gen =    576, tg =  22.54 t/s, tg_3s =  22.60 t/s
+2026-11-09 17:37:10 [DEBUG]
+ 36.32.943.498 I slot print_timing: id  3 | task 9422 | n_gen =    644, tg =  22.52 t/s, tg_3s =  22.38 t/s
+2026-11-09 17:37:13 [DEBUG]
+ 36.35.956.137 I slot print_timing: id  3 | task 9422 | n_gen =    712, tg =  22.52 t/s, tg_3s =  22.57 t/s
+2026-11-09 17:37:16 [DEBUG]
+ 36.38.968.418 I slot print_timing: id  3 | task 9422 | n_gen =    780, tg =  22.53 t/s, tg_3s =  22.57 t/s
+2026-11-09 17:37:19 [DEBUG]
+ 36.41.971.451 I slot print_timing: id  3 | task 9422 | n_gen =    847, tg =  22.51 t/s, tg_3s =  22.31 t/s
+2026-11-09 17:37:22 [DEBUG]
+ 36.45.002.402 I slot print_timing: id  3 | task 9422 | n_gen =    915, tg =  22.51 t/s, tg_3s =  22.44 t/s
+2026-11-09 17:37:25 [DEBUG]
+ 36.48.005.677 I slot print_timing: id  3 | task 9422 | n_gen =    982, tg =  22.49 t/s, tg_3s =  22.31 t/s
+2026-11-09 17:37:28 [DEBUG]
+ 36.51.010.973 I slot print_timing: id  3 | task 9422 | n_gen =   1049, tg =  22.48 t/s, tg_3s =  22.29 t/s
+2026-11-09 17:37:31 [DEBUG]
+ 36.54.047.928 I slot print_timing: id  3 | task 9422 | n_gen =   1116, tg =  22.45 t/s, tg_3s =  22.06 t/s
+2026-11-09 17:37:34 [DEBUG]
+ 36.57.065.666 I slot print_timing: id  3 | task 9422 | n_gen =   1184, tg =  22.46 t/s, tg_3s =  22.53 t/s
+2026-11-09 17:37:37 [DEBUG]
+ 37.00.105.966 I slot print_timing: id  3 | task 9422 | n_gen =   1252, tg =  22.45 t/s, tg_3s =  22.37 t/s
+2026-11-09 17:37:40 [DEBUG]
+ 37.03.130.103 I slot print_timing: id  3 | task 9422 | n_gen =   1319, tg =  22.44 t/s, tg_3s =  22.16 t/s
+2026-11-09 17:37:43 [DEBUG]
+ 37.06.144.059 I slot print_timing: id  3 | task 9422 | n_gen =   1386, tg =  22.43 t/s, tg_3s =  22.23 t/s
+2026-11-09 17:37:46 [DEBUG]
+ 37.09.183.003 I slot print_timing: id  3 | task 9422 | n_gen =   1454, tg =  22.43 t/s, tg_3s =  22.38 t/s
+2026-11-09 17:37:49 [DEBUG]
+ 37.12.187.513 I slot print_timing: id  3 | task 9422 | n_gen =   1521, tg =  22.42 t/s, tg_3s =  22.30 t/s
+2026-11-09 17:37:52 [DEBUG]
+ 37.15.197.263 I slot print_timing: id  3 | task 9422 | n_gen =   1588, tg =  22.41 t/s, tg_3s =  22.26 t/s
+2026-11-09 17:37:55 [DEBUG]
+ 37.18.229.697 I slot print_timing: id  3 | task 9422 | n_gen =   1655, tg =  22.40 t/s, tg_3s =  22.09 t/s
+2026-11-09 17:37:59 [DEBUG]
+ 37.21.274.219 I slot print_timing: id  3 | task 9422 | n_gen =   1723, tg =  22.40 t/s, tg_3s =  22.34 t/s
+2026-11-09 17:38:02 [DEBUG]
+ 37.24.303.845 I slot print_timing: id  3 | task 9422 | n_gen =   1790, tg =  22.39 t/s, tg_3s =  22.11 t/s
+2026-11-09 17:38:05 [DEBUG]
+ 37.27.310.252 I slot print_timing: id  3 | task 9422 | n_gen =   1857, tg =  22.38 t/s, tg_3s =  22.29 t/s
+2026-11-09 17:38:08 [DEBUG]
+ 37.30.340.770 I slot print_timing: id  3 | task 9422 | n_gen =   1924, tg =  22.37 t/s, tg_3s =  22.11 t/s
+2026-11-09 17:38:11 [DEBUG]
+ 37.33.349.686 I slot print_timing: id  3 | task 9422 | n_gen =   1991, tg =  22.37 t/s, tg_3s =  22.27 t/s
+2026-11-09 17:38:14 [DEBUG]
+ 37.36.392.264 I slot print_timing: id  3 | task 9422 | n_gen =   2058, tg =  22.36 t/s, tg_3s =  22.02 t/s
+2026-11-09 17:38:17 [DEBUG]
+ 37.39.408.629 I slot print_timing: id  3 | task 9422 | n_gen =   2124, tg =  22.34 t/s, tg_3s =  21.88 t/s
+2026-11-09 17:38:20 [DEBUG]
+ 37.42.444.609 I slot print_timing: id  3 | task 9422 | n_gen =   2191, tg =  22.33 t/s, tg_3s =  22.07 t/s
+2026-11-09 17:38:23 [DEBUG]
+ 37.45.465.813 I slot print_timing: id  3 | task 9422 | n_gen =   2257, tg =  22.32 t/s, tg_3s =  21.85 t/s
+2026-11-09 17:38:26 [DEBUG]
+ 37.48.501.522 I slot print_timing: id  3 | task 9422 | n_gen =   2324, tg =  22.31 t/s, tg_3s =  22.07 t/s
+2026-11-09 17:38:29 [DEBUG]
+ 37.51.525.684 I slot print_timing: id  3 | task 9422 | n_gen =   2390, tg =  22.30 t/s, tg_3s =  21.82 t/s
+2026-11-09 17:38:32 [DEBUG]
+ 37.54.567.930 I slot print_timing: id  3 | task 9422 | n_gen =   2456, tg =  22.28 t/s, tg_3s =  21.69 t/s
+2026-11-09 17:38:35 [DEBUG]
+ 37.57.596.579 I slot print_timing: id  3 | task 9422 | n_gen =   2522, tg =  22.27 t/s, tg_3s =  21.79 t/s
+2026-11-09 17:38:38 [DEBUG]
+ 38.00.598.921 I slot print_timing: id  3 | task 9422 | n_gen =   2588, tg =  22.26 t/s, tg_3s =  21.98 t/s
+2026-11-09 17:38:41 [DEBUG]
+ 38.03.625.519 I slot print_timing: id  3 | task 9422 | n_gen =   2653, tg =  22.24 t/s, tg_3s =  21.48 t/s
+2026-11-09 17:38:44 [DEBUG]
+ 38.06.659.054 I slot print_timing: id  3 | task 9422 | n_gen =   2719, tg =  22.23 t/s, tg_3s =  21.76 t/s
+2026-11-09 17:38:47 [DEBUG]
+ 38.09.669.234 I slot print_timing: id  3 | task 9422 | n_gen =   2785, tg =  22.22 t/s, tg_3s =  21.93 t/s
+2026-11-09 17:38:50 [DEBUG]
+ 38.12.686.730 I slot print_timing: id  3 | task 9422 | n_gen =   2851, tg =  22.21 t/s, tg_3s =  21.87 t/s
+2026-11-09 17:38:53 [DEBUG]
+ 38.15.711.639 I slot print_timing: id  3 | task 9422 | n_gen =   2916, tg =  22.20 t/s, tg_3s =  21.49 t/s
+2026-11-09 17:38:56 [DEBUG]
+ 38.18.735.402 I slot print_timing: id  3 | task 9422 | n_gen =   2982, tg =  22.19 t/s, tg_3s =  21.83 t/s
+2026-11-09 17:38:59 [DEBUG]
+ 38.21.759.163 I slot print_timing: id  3 | task 9422 | n_gen =   3048, tg =  22.18 t/s, tg_3s =  21.83 t/s
+2026-11-09 17:39:02 [DEBUG]
+ 38.24.784.617 I slot print_timing: id  3 | task 9422 | n_gen =   3114, tg =  22.17 t/s, tg_3s =  21.81 t/s
+2026-11-09 17:39:05 [DEBUG]
+ 38.27.825.344 I slot print_timing: id  3 | task 9422 | n_gen =   3180, tg =  22.16 t/s, tg_3s =  21.71 t/s
+2026-11-09 17:39:08 [DEBUG]
+ 38.30.829.970 I slot print_timing: id  3 | task 9422 | n_gen =   3245, tg =  22.15 t/s, tg_3s =  21.63 t/s
+2026-11-09 17:39:11 [DEBUG]
+ 38.33.870.709 I slot print_timing: id  3 | task 9422 | n_gen =   3311, tg =  22.14 t/s, tg_3s =  21.71 t/s
+2026-11-09 17:39:14 [DEBUG]
+ 38.36.879.762 I slot print_timing: id  3 | task 9422 | n_gen =   3376, tg =  22.13 t/s, tg_3s =  21.60 t/s
+2026-11-09 17:39:17 [DEBUG]
+ 38.39.909.882 I slot print_timing: id  3 | task 9422 | n_gen =   3439, tg =  22.11 t/s, tg_3s =  20.79 t/s
+2026-11-09 17:39:20 [DEBUG]
+ 38.42.935.991 I slot print_timing: id  3 | task 9422 | n_gen =   3503, tg =  22.09 t/s, tg_3s =  21.15 t/s
+2026-11-09 17:39:23 [DEBUG]
+ 38.45.971.477 I slot print_timing: id  3 | task 9422 | n_gen =   3567, tg =  22.07 t/s, tg_3s =  21.08 t/s
+2026-11-09 17:39:26 [DEBUG]
+ 38.48.997.987 I slot print_timing: id  3 | task 9422 | n_gen =   3630, tg =  22.05 t/s, tg_3s =  20.82 t/s
+2026-11-09 17:39:29 [DEBUG]
+ 38.51.841.434 I slot print_timing: id  3 | task 9422 | prompt eval time =   81032.96 ms / 18603 tokens (    4.36 ms per token,   229.57 tokens per second)
+38.51.841.441 I slot print_timing: id  3 | task 9422 |        eval time =  167450.70 ms /  3690 tokens (   45.39 ms per token,    22.03 tokens per second)
+38.51.841.451 I slot print_timing: id  3 | task 9422 |       total time =  248483.66 ms / 22293 tokens
+38.51.841.456 I slot print_timing: id  3 | task 9422 |    graphs reused =      12888
+38.51.841.458 I slot print_timing: id  3 | task 9422 |   graph reallocs =        280    /     0        (same size) / (changed size)
+2026-11-09 17:39:29 [DEBUG]
+ 38.51.842.787 I slot      release: id  3 | task 9422 | stop processing: n_tokens = 23330, truncated = 0
+2026-11-09 17:39:29  [INFO]
+ [qwen.qwen3-coder-30b-a3b-instruct] Finished streaming response

@@ -1,0 +1,43 @@
+{
+  "id": "20261109_123456_198",
+  "created_at": "2026-11-09T12:34:56.198623",
+  "updated_at": "2026-11-09T13:24:10.645172",
+  "repo_root": "G:\\Personal\\Dev\\Web\\Drone_Website",
+  "mode": "plan",
+  "model": "qwen.qwen3-coder-30b-a3b-instruct",
+  "temperature": 0.1,
+  "max_tokens": 4096,
+  "title": "Hello",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello",
+      "timestamp": "2026-11-09T12:35:31.100708"
+    },
+    {
+      "role": "assistant",
+      "content": "Hi, I'm here to help you with your codebase. What would you like me to assist with today?\n\nPLAN READY: I'm ready to help with any code changes or analysis you need. Please provide the specific task or question you'd like me to address in your codebase.",
+      "timestamp": "2026-11-09T12:36:06.744628"
+    },
+    {
+      "role": "user",
+      "content": "what is your purpose",
+      "timestamp": "2026-11-09T13:23:59.794724"
+    },
+    {
+      "role": "assistant",
+      "content": "I am a planning agent designed to help you think through changes to your codebase. My purpose is to:\n\n1. Analyze code from first principles\n2. Present concrete options when approaches differ\n3. Note tradeoffs, risks, and edge cases\n4. Ask clarifying questions when ambiguous\n5. Request more file context when needed\n\nI work in READ-ONLY mode and will help you plan changes rather than directly editing files. I can also ask for specific information about your project needs.\n\nWhat would you like me to help you with regarding your codebase today?\n\nPLAN READY: I'm ready to assist with any code analysis or planning tasks you need help with. Please provide a specific request or question about your codebase.",
+      "thinking": "",
+      "usage_total": 2636,
+      "timestamp": "2026-11-09T13:24:10.645172"
+    }
+  ],
+  "pending_patches": null,
+  "pending_diff": null,
+  "last_status": {
+    "type": "plan_ready",
+    "summary": "I'm ready to assist with any code analysis or planning tasks you need help with. Please provide a specific request or question about your codebase."
+  },
+  "critic_enabled": true,
+  "total_tokens": 2636
+}

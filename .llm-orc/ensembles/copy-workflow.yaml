@@ -1,0 +1,25 @@
+name: copy-workflow
+description: "Writer and Critic pipeline."
+agents:
+  - name: writer
+    model_profile: gemma-writer
+    system_prompt: |
+      You are a professional copywriter and editor.
+      Review the provided file content, the user's instructions, and any PROJECT RULES.
+
+      - If the USER INSTRUCTION asks you to rewrite, update, or edit the file, output ONLY the complete, updated file content. Do not wrap it in markdown code blocks.
+      - If the USER INSTRUCTION asks for a summary, analysis, or explanation, output ONLY the requested text. Do not output HTML.
+
+  - name: prose_critic
+    model_profile: gemma-critic
+    depends_on: [writer]
+    system_prompt: |
+      You are an automated formatting validator.
+
+      CRITICAL: You must output the ENTIRE file exactly as received. Do NOT add any conversational text, explanations, or markdown code blocks. 
+
+      If the draft is perfect, output `<!-- APPROVED -->` on the very first line, followed immediately by the raw HTML.
+      If the draft needs fixing, output ONLY the corrected raw HTML. 
+
+      Updated File:
+      {{ draft_output }}

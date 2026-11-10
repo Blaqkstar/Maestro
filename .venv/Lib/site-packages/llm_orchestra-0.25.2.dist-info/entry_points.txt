@@ -1,0 +1,2 @@
+[console_scripts]
+llm-orc = llm_orc.cli:cli

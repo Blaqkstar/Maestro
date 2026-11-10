@@ -1,0 +1,163 @@
+Executing ensemble 'search-replace-workflow' with 1 agents
+──────────────────────────────────────────────────
+[?25l[32m⠋[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠙[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠹[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠸[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠼[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠴[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠧[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠇[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠏[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠋[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠙[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠹[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠸[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠴[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠦[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠧[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠇[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠏[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠙[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠹[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠸[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠼[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠴[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠦[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠇[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠏[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠋[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠙[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠹[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠸[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠴[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠦[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠧[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠇[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [33m◐[0m [33mcoder[0m              
+[2K[1A[2K[1A[2K[32m⠋[0m [1;34mOrchestrating Agent Responses[0m
+  └── [1mPhase 1[0m                  
+      └── [32m✓[0m [32mcoder[0m              
+[?25h
+[1A[2K[1A[2K[1A[2K
+Orchestrating Agent Responses
+└── Phase 1
+    └── ✓ coder
+
+📋 Results
+==================================================
+
+✓ coder (qwen-coder -> qwen.qwen3-coder-30b-a3b-instruct)
+<<<PATCH path="index.html">>>
+<<<<<<< SEARCH
+<!doctype html>
+
+<html lang="en">
+=======
+<!-- pipeline test -->
+<!doctype html>
+
+<html lang="en">
+>>>>>>> REPLACE
+<<<END PATCH>>>
+
+
+
+📊 Performance Summary
+============================================================
+Total agents: 1
+Total tokens: 25,373
+Total cost: $0.0000
+Duration: 3.19s
+
+👥 Per-Agent Performance
+--------------------------------------------------
+  coder:
+    Tokens: 25,373 (input: 25,331, output: 42)
+    Cost: $0.0000
+    Peak CPU: 60.6%
+    Avg CPU: 20.2%
+    Peak memory: 55.4 MB
+    Avg memory: 55.4 MB
+
+🔧 System Resource Usage
+----------------------------------------
+Peak CPU usage: 0.0%
+Average CPU usage: 0.0%
+Sample count: 1
+
+⚡ Execution Phases
+-----------------------------------
+Phase 1: 3.19s
+  Agents: coder
+  Peak CPU: 78.7%
+  Avg CPU: 46.5%
+  Peak memory: 55.5 MB
+  Avg memory: 55.4 MB

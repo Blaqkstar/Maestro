@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LLM Orchestra</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #09090b;
+        --bg2: #0f0f12;
+        --bg3: #18181b;
+        --bord: #27272a;
+        --fg: #e4e4e7;
+        --dim: #a1a1aa;
+        --mute: #71717a;
+        --blue: #60a5fa;
+        --green: #22c55e;
+        --yellow: #facc15;
+        --red: #ef4444;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: "Inter", system-ui, sans-serif;
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas: "head head" "side main" "side input";
+      }
+      header {
+        grid-area: head;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--bord);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--blue);
+      }
+      .badge {
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        background: var(--bg3);
+        color: var(--dim);
+        font-family: ui-monospace, monospace;
+      }
+      .badge.folder {
+        background: rgba(96, 165, 250, 0.15);
+        color: var(--blue);
+      }
+      .badge.file {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+      }
+      .status {
+        font-size: 12px;
+        color: var(--dim);
+        margin-left: auto;
+        font-family: ui-monospace, monospace;
+      }
+      .status.ok {
+        color: var(--green);
+      }
+      .status.err {
+        color: var(--red);
+      }
+
+      #sidebar {
+        grid-area: side;
+        background: var(--bg2);
+        border-right: 1px solid var(--bord);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--bord);
+      }
+      .tabs button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background: none;
+        font-size: 12px;
+        color: var(--mute);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+      .tabs button.active {
+        color: var(--fg);
+        border-bottom-color: var(--blue);
+      }
+      .panel {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: none;
+      }
+      .panel.active {
+        display: block;
+      }
+
+      .path-bar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .path-bar input {
+        flex: 1;
+        background: var(--bg3);
+        border: 1px solid var(--bord);
+        color: var(--fg);
+        padding: 6px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        outline: none;
+      }
+      .path-bar input:focus {
+        border-color: var(--blue);
+      }
+      .path-bar button {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+      .file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .file-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--dim);
+      }
+      .file-item:hover {
+        background: var(--bg3);
+        color: var(--fg);
+      }
+      .file-item .name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .file-item .meta {
+        font-size: 10px;
+        color: var(--mute);
+        font-family: ui-monospace, monospace;
+      }
+      .file-item.dir .name {
+        color: var(--blue);
+        font-weight: 500;
+      }
+      .file-item .use-folder {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: rgba(96, 165, 250, 0.15);
+        color: var(--blue);
+        border: 1px solid rgba(96, 165, 250, 0.3);
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .file-item:hover .use-folder {
+        opacity: 1;
+      }
+
+      #main {
+        grid-area: main;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .empty {
+        text-align: center;
+        color: var(--mute);
+        padding: 60px 20px;
+        font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .empty .icon {
+        font-size: 42px;
+        opacity: 0.4;
+      }
+
+      .target-header {
+        padding: 12px 16px;
+        background: var(--bg2);
+        border: 1px solid var(--bord);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .target-header .icon {
+        font-size: 20px;
+      }
+      .target-header .info {
+        flex: 1;
+        min-width: 0;
+      }
+      .target-header .path {
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        color: var(--fg);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .target-header .sub {
+        font-size: 11px;
+        color: var(--mute);
+        margin-top: 2px;
+      }
+      .target-header .clear {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+
+      .scout-card {
+        padding: 14px 16px;
+        background: var(--bg2);
+        border: 1px solid var(--bord);
+        border-radius: 8px;
+      }
+      .scout-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .scout-reasoning {
+        font-size: 12px;
+        color: var(--dim);
+        margin-bottom: 10px;
+        font-style: italic;
+        padding: 8px;
+        background: var(--bg3);
+        border-radius: 4px;
+      }
+      .scout-files {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+      .scout-file {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: var(--bg3);
+        border-radius: 4px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .scout-file:hover {
+        border-color: var(--bord);
+      }
+      .scout-file input {
+        accent-color: var(--blue);
+      }
+      .scout-file.checked {
+        border-color: rgba(96, 165, 250, 0.4);
+        background: rgba(96, 165, 250, 0.05);
+      }
+      .scout-controls {
+        display: flex;
+        gap: 8px;
+      }
+
+      .file-section {
+        border: 1px solid var(--bord);
+        border-radius: 8px;
+        background: var(--bg2);
+        overflow: hidden;
+      }
+      .file-section.complete {
+        border-color: rgba(34, 197, 94, 0.3);
+      }
+      .file-section.error {
+        border-color: rgba(239, 68, 68, 0.3);
+      }
+      .file-head {
+        padding: 10px 14px;
+        background: var(--bg3);
+        border-bottom: 1px solid var(--bord);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .file-head .idx {
+        color: var(--mute);
+        font-family: ui-monospace, monospace;
+      }
+      .file-head .name {
+        font-weight: 600;
+      }
+      .file-head .status {
+        margin-left: auto;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        color: var(--mute);
+      }
+      .file-head .status.ok {
+        color: var(--green);
+      }
+      .file-head .status.err {
+        color: var(--red);
+      }
+
+      .agent-card {
+        border-top: 1px solid var(--bord);
+      }
+      .agent-card:first-child {
+        border-top: none;
+      }
+      .agent-head {
+        padding: 8px 14px;
+        background: rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+      }
+      .agent-head .aname {
+        font-weight: 600;
+        text-transform: capitalize;
+      }
+      .agent-head .amodel {
+        color: var(--mute);
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+      }
+      .agent-head .astatus {
+        margin-left: auto;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--mute);
+      }
+      .agent-head .astatus.ok {
+        color: var(--green);
+      }
+      .agent-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel-c {
+        padding: 10px 14px;
+      }
+      .panel-c + .panel-c {
+        border-left: 1px solid var(--bord);
+      }
+      .panel-c .label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--mute);
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+      .panel-c .txt {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 280px;
+        overflow-y: auto;
+        line-height: 1.5;
+        color: #d4d4d8;
+      }
+      .panel-c .txt.reasoning {
+        color: var(--yellow);
+        font-style: italic;
+      }
+      .panel-c .txt:empty::before {
+        content: "—";
+        color: #3f3f46;
+      }
+
+      .diff-card {
+        border-top: 1px solid var(--bord);
+        padding: 0;
+      }
+      .diff-head {
+        padding: 8px 14px;
+        font-size: 12px;
+        background: rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .diff-head label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .diff-head input {
+        accent-color: var(--green);
+      }
+      .diff-head .stats {
+        margin-left: auto;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--mute);
+      }
+      .diff-body {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px 14px;
+        white-space: pre;
+        line-height: 1.5;
+      }
+      .d-add {
+        color: #86efac;
+        background: rgba(34, 197, 94, 0.08);
+        display: block;
+      }
+      .d-rem {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.08);
+        display: block;
+      }
+      .d-ctx {
+        color: var(--mute);
+        display: block;
+      }
+      .d-hdr {
+        color: var(--blue);
+        display: block;
+        font-weight: 600;
+      }
+
+      #input-area {
+        grid-area: input;
+        padding: 12px 20px 20px;
+        border-top: 1px solid var(--bord);
+        background: var(--bg);
+      }
+      textarea {
+        width: 100%;
+        background: var(--bg3);
+        border: 1px solid var(--bord);
+        color: var(--fg);
+        padding: 12px;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 14px;
+        resize: vertical;
+        min-height: 70px;
+        outline: none;
+      }
+      textarea:focus {
+        border-color: var(--blue);
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .toolbar label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--dim);
+        cursor: pointer;
+      }
+      .toolbar label input {
+        accent-color: var(--blue);
+      }
+      button {
+        background: var(--bg3);
+        border: 1px solid var(--bord);
+        color: var(--fg);
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        background: #2a2a2e;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button.primary {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+      }
+      button.primary:hover:not(:disabled) {
+        background: #1d4ed8;
+      }
+      button.danger {
+        background: #7f1d1d;
+        border-color: #7f1d1d;
+        color: #fecaca;
+      }
+      button.success {
+        background: #14532d;
+        border-color: #14532d;
+        color: #bbf7d0;
+      }
+      button.scout {
+        background: #7c3aed;
+        border-color: #7c3aed;
+        color: #fff;
+      }
+      button.scout:hover:not(:disabled) {
+        background: #6d28d9;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 18px;
+        border-radius: 8px;
+        font-size: 13px;
+        z-index: 100;
+        animation: slideIn 0.2s ease-out;
+        max-width: 400px;
+      }
+      .toast.info {
+        background: #1e3a8a;
+        color: #dbeafe;
+      }
+      .toast.error {
+        background: #7f1d1d;
+        color: #fecaca;
+      }
+      .toast.success {
+        background: #14532d;
+        color: #bbf7d0;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .spin {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 2px solid var(--mute);
+        border-top-color: var(--blue);
+        border-radius: 50%;
+        animation: sp 0.8s linear infinite;
+      }
+      @keyframes sp {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>🎛️ LLM Orchestra</h1>
+      <span id="targetBadge" class="badge">no target</span>
+      <span id="status" class="status">Initializing…</span>
+    </header>
+
+    <aside id="sidebar">
+      <div class="tabs">
+        <button data-tab="files" class="active">📁 Files</button>
+        <button data-tab="history">🕓 History</button>
+      </div>
+      <div class="panel active" data-panel="files">
+        <div class="path-bar">
+          <input id="rootInput" placeholder="C:\Path\To\Project" />
+          <button id="goBtn">Go</button>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+      <div class="panel" data-panel="history">
+        <div id="historyList"></div>
+      </div>
+    </aside>
+
+    <main id="main">
+      <div class="empty" id="empty">
+        <div class="icon">🗂️</div>
+        <div>Pick a folder in the sidebar to start</div>
+        <div style="font-size: 12px; color: #52525b">
+          Click any folder → use as target · Click any file → single-file mode
+        </div>
+      </div>
+    </main>
+
+    <div id="input-area">
+      <textarea
+        id="prompt"
+        placeholder="What should the agents do? (Enter to send · Shift+Enter for newline)"
+      ></textarea>
+      <div class="toolbar">
+        <button id="scoutBtn" class="scout" style="display: none">
+          🔍 Scout Folder
+        </button>
+        <button id="runBtn" class="primary">▶ Run</button>
+        <button id="stopBtn" class="danger" disabled>■ Stop</button>
+        <button id="saveBtn" class="success" style="display: none">
+          💾 Save Approved Files
+        </button>
+        <label><input type="checkbox" id="useSearch" /> 🌐 Web search</label>
+        <span
+          id="runInfo"
+          style="margin-left: auto; font-size: 12px; color: var(--mute)"
+        ></span>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const state = {
+        target: null,
+        targetType: null, // 'file' | 'folder'
+        scoutPlan: null, // {files, reasoning, available}
+        scoutSelected: new Set(),
+        running: false,
+        results: [], // [{file, name, output, diff, error, checked}]
+        agentEls: {}, // keyed by `${tag}::${agent}`
+      };
+
+      function toast(msg, type = "info", ms = 4000) {
+        const el = document.createElement("div");
+        el.className = `toast ${type}`;
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), ms);
+      }
+
+      function fmtSize(b) {
+        if (b < 1024) return b + " B";
+        if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
+        return (b / 1048576).toFixed(1) + " MB";
+      }
+
+      // ── Target ──
+      function setTarget(path, type) {
+        state.target = path;
+        state.targetType = type;
+        state.scoutPlan = null;
+        state.scoutSelected = new Set();
+        state.results = [];
+        $("saveBtn").style.display = "none";
+        updateTargetUI();
+        if (type === "folder") {
+          clearMain();
+          $("empty").innerHTML = `
+      <div class="icon">🗂️</div>
+      <div><strong>${path.split(/[\\/]/).pop()}</strong></div>
+      <div style="font-size:12px;color:#52525b">Type an instruction, click "Scout Folder" to preview the plan</div>`;
+        } else {
+          clearMain();
+          $("empty").innerHTML = `
+      <div class="icon">📄</div>
+      <div><strong>${path.split(/[\\/]/).pop()}</strong></div>
+      <div style="font-size:12px;color:#52525b">Single-file mode — type an instruction and hit Run</div>`;
+        }
+      }
+
+      function updateTargetUI() {
+        const b = $("targetBadge");
+        if (!state.target) {
+          b.textContent = "no target";
+          b.className = "badge";
+          return;
+        }
+        const name = state.target.split(/[\\/]/).pop();
+        b.textContent = `${state.targetType === "folder" ? "🗂️" : "📄"} ${name}`;
+        b.className = "badge " + state.targetType;
+        $("scoutBtn").style.display =
+          state.targetType === "folder" && !state.scoutPlan
+            ? "inline-block"
+            : "none";
+      }
+
+      function clearMain() {
+        $("main").innerHTML = "";
+        state.agentEls = {};
+      }
+
+      // ── File browser ──
+      const rootInput = $("rootInput");
+      const saved = localStorage.getItem("llm_orc_root");
+      if (saved) rootInput.value = saved;
+
+      async function loadFiles(root) {
+        const url = `/api/files${root ? "?root=" + encodeURIComponent(root) : ""}`;
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.error) {
+            toast(data.error, "error");
+            return;
+          }
+          rootInput.value = data.root;
+          localStorage.setItem("llm_orc_root", data.root);
+          renderFileList(data);
+        } catch (err) {
+          toast("Failed: " + err.message, "error");
+        }
+      }
+
+      function renderFileList(data) {
+        const list = $("fileList");
+        list.innerHTML = "";
+        if (data.parent) {
+          const up = document.createElement("div");
+          up.className = "file-item";
+          up.innerHTML = `<span class="name">..</span>`;
+          up.addEventListener("click", () => loadFiles(data.parent));
+          list.appendChild(up);
+        }
+        for (const e of data.entries) {
+          const item = document.createElement("div");
+          item.className = "file-item" + (e.is_dir ? " dir" : "");
+          const icon = e.is_dir ? "📁" : "📄";
+          item.innerHTML = `
+      <span class="name">${icon} ${e.name}</span>
+      ${e.is_dir ? "" : `<span class="meta">${fmtSize(e.size)}</span>`}
+      ${e.is_dir ? `<span class="use-folder" data-path="${e.path}">Use</span>` : ""}
+    `;
+          item.title = e.path;
+          item.addEventListener("click", (ev) => {
+            if (ev.target.classList.contains("use-folder")) {
+              setTarget(e.path, "folder");
+              return;
+            }
+            if (e.is_dir) loadFiles(e.path);
+            else setTarget(e.path, "file");
+          });
+          list.appendChild(item);
+        }
+      }
+
+      $("goBtn").addEventListener("click", () =>
+        loadFiles(rootInput.value.trim()),
+      );
+      rootInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") loadFiles(rootInput.value.trim());
+      });
+
+      // ── Scout ──
+      async function doScout() {
+        const prompt = $("prompt").value.trim();
+        if (!prompt) {
+          toast("Enter an instruction first", "error");
+          return;
+        }
+        if (!state.target || state.targetType !== "folder") return;
+
+        $("scoutBtn").disabled = true;
+        $("scoutBtn").textContent = "🔍 Scouting…";
+        $("status").textContent = "Scouting…";
+        $("status").className = "status";
+
+        try {
+          const res = await fetch("/api/scout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder: state.target, instruction: prompt }),
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+          state.scoutPlan = data;
+          state.scoutSelected = new Set(data.files);
+          renderScoutPlan(data);
+          $("status").textContent = `✓ ${data.files.length} files planned`;
+          $("status").className = "status ok";
+        } catch (err) {
+          toast("Scout failed: " + err.message, "error");
+          $("status").textContent = "❌ " + err.message;
+          $("status").className = "status err";
+        } finally {
+          $("scoutBtn").disabled = false;
+          $("scoutBtn").textContent = "🔍 Scout Folder";
+        }
+      }
+
+      function renderScoutPlan(plan) {
+        clearMain();
+        const card = document.createElement("div");
+        card.className = "scout-card";
+        card.innerHTML = `
+    <div class="scout-title">🔍 Scout Plan <span class="badge">${plan.files.length} of max ${plan.max}</span></div>
+    <div class="scout-reasoning">${escapeHtml(plan.reasoning || "(no reasoning)")}</div>
+    <div class="scout-files" id="scoutFiles"></div>
+    <div class="scout-controls">
+      <button id="addFileBtn">+ Add file</button>
+      <button id="rerunScoutBtn">↻ Re-scout</button>
+    </div>
+  `;
+        $("main").appendChild(card);
+
+        const container = $("scoutFiles");
+        plan.files.forEach((f) => {
+          const el = document.createElement("label");
+          el.className = "scout-file checked";
+          el.innerHTML = `<input type="checkbox" checked value="${f}"> <span>${f}</span>`;
+          container.appendChild(el);
+        });
+
+        container.addEventListener("change", (e) => {
+          if (e.target.type === "checkbox") {
+            if (e.target.checked) {
+              state.scoutSelected.add(e.target.value);
+              e.target.parentElement.classList.add("checked");
+            } else {
+              state.scoutSelected.delete(e.target.value);
+              e.target.parentElement.classList.remove("checked");
+            }
+          }
+        });
+
+        $("addFileBtn").addEventListener("click", () => {
+          const avail = plan.available.filter((f) => !plan.files.includes(f));
+          if (avail.length === 0) {
+            toast("No more files to add", "info");
+            return;
+          }
+          const pick = prompt(
+            `Add file from list:\n\n${avail.slice(0, 30).join("\n")}\n\nType a path:`,
+          );
+          if (pick && avail.includes(pick)) {
+            plan.files.push(pick);
+            state.scoutSelected.add(pick);
+            renderScoutPlan(plan);
+          } else if (pick) {
+            toast("File not in folder", "error");
+          }
+        });
+
+        $("rerunScoutBtn").addEventListener("click", doScout);
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      }
+
+      // ── Agent rendering ──
+      function keyFor(tag, agent) {
+        return `${tag}::${agent}`;
+      }
+
+      function ensureAgent(tag, agentName, model, container) {
+        const k = keyFor(tag, agentName);
+        if (state.agentEls[k]) return state.agentEls[k];
+        const card = document.createElement("div");
+        card.className = "agent-card";
+        card.innerHTML = `
+    <div class="agent-head">
+      <span class="aname">${agentName}</span>
+      <span class="amodel">${model}</span>
+      <span class="astatus"><span class="spin"></span></span>
+    </div>
+    <div class="agent-body">
+      <div class="panel-c"><div class="label">🧠 Thinking</div><div class="txt reasoning"></div></div>
+      <div class="panel-c"><div class="label">💬 Output</div><div class="txt output"></div></div>
+    </div>`;
+        container.appendChild(card);
+        const els = {
+          card,
+          reasoning: card.querySelector(".reasoning"),
+          output: card.querySelector(".output"),
+          status: card.querySelector(".astatus"),
+          chars: 0,
+          reasoningChars: 0,
+          startTime: Date.now(),
+        };
+        state.agentEls[k] = els;
+        return els;
+      }
+
+      function appendText(els, target, text) {
+        const e = target === "reasoning" ? els.reasoning : els.output;
+        e.textContent += text;
+        e.scrollTop = e.scrollHeight;
+      }
+
+      // ── File section ──
+      function startFileSection(file, name, index, total) {
+        const sec = document.createElement("div");
+        sec.className = "file-section";
+        sec.dataset.file = file;
+        sec.innerHTML = `
+    <div class="file-head">
+      <span class="idx">${index}/${total}</span>
+      <span class="name">${escapeHtml(name)}</span>
+      <span class="status"><span class="spin"></span> processing…</span>
+    </div>`;
+        $("main").appendChild(sec);
+        sec.scrollIntoView({ behavior: "smooth", block: "start" });
+        return sec;
+      }
+
+      // ── Diff rendering ──
+      function renderDiffInto(container, diff, file, name, output) {
+        const card = document.createElement("div");
+        card.className = "diff-card";
+        const stats = countDiffStats(diff);
+        card.innerHTML = `
+    <div class="diff-head">
+      <label><input type="checkbox" checked> Save this file</label>
+      <span class="stats">+${stats.add} −${stats.rem}</span>
+    </div>
+    <div class="diff-body"></div>`;
+        const body = card.querySelector(".diff-body");
+        for (const line of diff.split("\n")) {
+          const cls =
+            line.startsWith("+++") ||
+            line.startsWith("---") ||
+            line.startsWith("@@")
+              ? "d-hdr"
+              : line.startsWith("+")
+                ? "d-add"
+                : line.startsWith("-")
+                  ? "d-rem"
+                  : "d-ctx";
+          const span = document.createElement("span");
+          span.className = cls;
+          span.textContent = line || " ";
+          body.appendChild(span);
+        }
+        container.appendChild(card);
+
+        const result = { file, name, output, diff, checked: true };
+        state.results.push(result);
+        card
+          .querySelector("input[type=checkbox]")
+          .addEventListener("change", (e) => {
+            result.checked = e.target.checked;
+          });
+      }
+
+      function countDiffStats(diff) {
+        let add = 0,
+          rem = 0;
+        for (const l of diff.split("\n")) {
+          if (l.startsWith("+") && !l.startsWith("+++")) add++;
+          if (l.startsWith("-") && !l.startsWith("---")) rem++;
+        }
+        return { add, rem };
+      }
+
+      // ── Sidebar tabs ──
+      document.querySelectorAll(".tabs button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tabs button")
+            .forEach((b) => b.classList.remove("active"));
+          document
+            .querySelectorAll(".panel")
+            .forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document
+            .querySelector(`.panel[data-panel="${btn.dataset.tab}"]`)
+            .classList.add("active");
+          if (btn.dataset.tab === "history") loadHistory();
+        });
+      });
+
+      async function loadHistory() {
+        try {
+          const res = await fetch("/api/history");
+          const entries = await res.json();
+          const list = $("historyList");
+          if (!entries.length) {
+            list.innerHTML =
+              '<p style="color:var(--mute);font-size:12px">No runs yet.</p>';
+            return;
+          }
+          list.innerHTML = "";
+          for (const e of entries) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.innerHTML = `
+        <span class="name">🗂️ ${(e.folder || "").split(/[\\/]/).pop()} (${e.file_count} files)</span>
+        <span class="meta">${new Date(e.timestamp).toLocaleDateString()}</span>`;
+            item.title = e.instruction;
+            item.addEventListener("click", () => loadHistoryItem(e.id));
+            list.appendChild(item);
+          }
+        } catch (err) {
+          toast("History error", "error");
+        }
+      }
+
+      async function loadHistoryItem(id) {
+        try {
+          const res = await fetch("/api/history/" + encodeURIComponent(id));
+          const data = await res.json();
+          if (data.error) {
+            toast(data.error, "error");
+            return;
+          }
+          clearMain();
+          const header = document.createElement("div");
+          header.className = "target-header";
+          header.innerHTML = `<span class="icon">🗂️</span><div class="info"><div class="path">${escapeHtml(data.folder)}</div><div class="sub">${escapeHtml(data.instruction)}</div></div>`;
+          $("main").appendChild(header);
+          state.results = [];
+          for (const r of data.results || []) {
+            if (r.error) {
+              const err = document.createElement("div");
+              err.className = "file-section error";
+              err.innerHTML = `<div class="file-head"><span class="name">${escapeHtml(r.name)}</span><span class="status err">${escapeHtml(r.error)}</span></div>`;
+              $("main").appendChild(err);
+            } else if (r.diff) {
+              const sec = document.createElement("div");
+              sec.className = "file-section complete";
+              sec.innerHTML = `<div class="file-head"><span class="name">${escapeHtml(r.name)}</span><span class="status ok">✓ ${fmtSize(r.bytes || 0)}</span></div>`;
+              $("main").appendChild(sec);
+              renderDiffInto(sec, r.diff, r.file, r.name, r.output);
+            }
+          }
+          $("saveBtn").style.display = "inline-block";
+          toast("Loaded past run", "info");
+        } catch (err) {
+          toast("Load failed: " + err.message, "error");
+        }
+      }
+
+      // ── Run ──
+      async function runSingleFile() {
+        const prompt = $("prompt").value.trim();
+        if (!prompt) {
+          toast("Enter an instruction", "error");
+          return;
+        }
+        if (state.running) return;
+
+        // We re-use the batch endpoint with a single-item list.
+        await executeBatch([state.target]);
+      }
+
+      async function executeBatch(absFiles) {
+        const prompt = $("prompt").value.trim();
+        if (!prompt || !absFiles.length) return;
+
+        state.running = true;
+        state.results = [];
+        state.agentEls = {};
+        $("runBtn").disabled = true;
+        $("stopBtn").disabled = false;
+        $("saveBtn").style.display = "none";
+        $("status").textContent = "Running…";
+        $("status").className = "status";
+        clearMain();
+
+        // Build header
+        if (state.targetType === "folder") {
+          const header = document.createElement("div");
+          header.className = "target-header";
+          header.innerHTML = `<span class="icon">🗂️</span><div class="info"><div class="path">${escapeHtml(state.target)}</div><div class="sub">${absFiles.length} file${absFiles.length === 1 ? "" : "s"} in batch</div></div>`;
+          $("main").appendChild(header);
+        }
+
+        const startTime = Date.now();
+        const ticker = setInterval(() => {
+          $("runInfo").textContent =
+            `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+        }, 200);
+
+        // For folder mode, we send relative paths (folder + files). For single-file, we cheat:
+        // we tell the server the folder is the parent dir.
+        let folder, relFiles;
+        if (state.targetType === "folder") {
+          folder = state.target;
+          relFiles = absFiles; // already relative
+        } else {
+          const p = state.target;
+          folder = p.substring(
+            0,
+            Math.max(p.lastIndexOf("\\"), p.lastIndexOf("/")),
+          );
+          relFiles = [p.substring(folder.length + 1)];
+        }
+
+        try {
+          const res = await fetch("/api/run-batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              folder,
+              files: relFiles,
+              instruction: prompt,
+              use_search: $("useSearch").checked,
+            }),
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${res.status}`);
+          }
+
+          const reader = res.body.getReader();
+          const dec = new TextDecoder();
+          let buf = "";
+          let currentSection = null;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const frames = buf.split("\n\n");
+            buf = frames.pop();
+            for (const frame of frames) {
+              if (!frame.startsWith("data: ")) continue;
+              try {
+                const evt = JSON.parse(frame.slice(6));
+                if (evt.event === "file_start") {
+                  currentSection = startFileSection(
+                    evt.file,
+                    evt.name,
+                    evt.index,
+                    evt.total,
+                  );
+                }
+                handleEvent(evt, currentSection);
+              } catch {}
+            }
+          }
+        } catch (err) {
+          toast("Run failed: " + err.message, "error", 8000);
+          $("status").textContent = "❌ " + err.message;
+          $("status").className = "status err";
+        } finally {
+          clearInterval(ticker);
+          state.running = false;
+          $("runBtn").disabled = false;
+          $("stopBtn").disabled = true;
+        }
+      }
+
+      function handleEvent(evt, section) {
+        switch (evt.event) {
+          case "search_start":
+            $("status").textContent = "🌐 Searching…";
+            break;
+          case "search_end":
+            $("status").textContent = `🌐 ${evt.count} results`;
+            break;
+          case "agent_start":
+            if (section) ensureAgent(evt.tag, evt.agent, evt.model, section);
+            break;
+          case "reasoning": {
+            const els = state.agentEls[keyFor(evt.tag, evt.agent)];
+            if (els) appendText(els, "reasoning", evt.text);
+            break;
+          }
+          case "content": {
+            const els = state.agentEls[keyFor(evt.tag, evt.agent)];
+            if (els) appendText(els, "output", evt.text);
+            break;
+          }
+          case "agent_end": {
+            const els = state.agentEls[keyFor(evt.tag, evt.agent)];
+            if (els) {
+              const t = (
+                evt.elapsed || (Date.now() - els.startTime) / 1000
+              ).toFixed(1);
+              els.status.textContent = `✓ ${t}s`;
+              els.status.classList.add("ok");
+            }
+            break;
+          }
+          case "agent_error":
+          case "agent_stopped": {
+            const els = state.agentEls[keyFor(evt.tag, evt.agent)];
+            if (els) {
+              els.status.textContent = "❌ " + (evt.error || "stopped");
+              els.status.classList.add("err");
+            }
+            break;
+          }
+          case "file_complete":
+            if (section) {
+              section.querySelector(".status").innerHTML =
+                `✓ ${fmtSize(evt.bytes)}`;
+              section.querySelector(".status").classList.add("ok");
+              section.classList.add("complete");
+              renderDiffInto(section, evt.diff, evt.file, evt.name, evt.output);
+            }
+            break;
+          case "file_error":
+            if (section) {
+              section.querySelector(".status").textContent = "❌ " + evt.error;
+              section.querySelector(".status").classList.add("err");
+              section.classList.add("error");
+            }
+            break;
+          case "batch_complete":
+            $("status").textContent =
+              `✓ Batch complete · ${evt.results.length} files`;
+            $("status").className = "status ok";
+            $("saveBtn").style.display = "inline-block";
+            break;
+          case "stopped":
+            $("status").textContent = "■ Stopped";
+            $("status").className = "status err";
+            break;
+          case "error":
+            toast(evt.error, "error", 8000);
+            $("status").textContent = "❌ " + evt.error;
+            $("status").className = "status err";
+            break;
+        }
+      }
+
+      // ── Save ──
+      async function saveApproved() {
+        const items = state.results
+          .filter((r) => r.checked && r.output)
+          .map((r) => ({ file: r.file, output: r.output }));
+        if (!items.length) {
+          toast("No files checked", "info");
+          return;
+        }
+        try {
+          const res = await fetch("/api/save-batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          });
+          const data = await res.json();
+          const ok = data.saved.filter((s) => !s.error).length;
+          const bad = data.saved.filter((s) => s.error).length;
+          toast(
+            `Saved ${ok} file${ok === 1 ? "" : "s"}${bad ? ` · ${bad} failed` : ""}`,
+            bad ? "error" : "success",
+            5000,
+          );
+          $("saveBtn").style.display = "none";
+        } catch (err) {
+          toast("Save failed: " + err.message, "error");
+        }
+      }
+
+      async function stopRun() {
+        await fetch("/api/stop", { method: "POST" });
+        toast("Stop signal sent", "info");
+      }
+
+      // ── Wire up ──
+      $("scoutBtn").addEventListener("click", doScout);
+      $("runBtn").addEventListener("click", () => {
+        if (!state.target) {
+          toast("Pick a target first", "error");
+          return;
+        }
+        if (state.targetType === "folder") {
+          if (!state.scoutPlan) {
+            toast("Scout the folder first", "error");
+            return;
+          }
+          if (state.scoutSelected.size === 0) {
+            toast("Select at least one file in the plan", "error");
+            return;
+          }
+          executeBatch(Array.from(state.scoutSelected));
+        } else {
+          runSingleFile();
+        }
+      });
+      $("saveBtn").addEventListener("click", saveApproved);
+      $("stopBtn").addEventListener("click", stopRun);
+
+      $("prompt").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          $("runBtn").click();
+        }
+      });
+
+      // Health check
+      fetch("/api/health")
+        .then((r) => r.json())
+        .then((h) => {
+          if (!h.search_available) {
+            $("useSearch").disabled = true;
+            $("useSearch").parentElement.style.opacity = ".4";
+            $("useSearch").parentElement.title = "pip install ddgs";
+          }
+          $("status").textContent = h.lm_studio
+            ? "✓ Ready"
+            : "⚠ LM Studio offline";
+          $("status").className = "status " + (h.lm_studio ? "ok" : "err");
+        });
+
+      loadFiles(rootInput.value || null);
+    </script>
+  </body>
+</html>
