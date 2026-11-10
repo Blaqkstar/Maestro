@@ -978,6 +978,12 @@ def _extract_status(content: str) -> dict:
             return {"type": "need_info", "question": line[len("NEED INFO:"):].strip()}
         if line.startswith("OPTIONS:"):
             return {"type": "options", "summary": line[len("OPTIONS:"):].strip()}
+            
+    # FALLBACK: If the model generated a long response with list items or headers,
+    # assume it generated a plan and just forgot the status line.
+    if len(content) > 200 and ("1." in content or "- " in content or "##" in content):
+        return {"type": "plan_ready", "summary": "Plan generated (missing status tag)."}
+        
     return {"type": "unknown"}
 
 
@@ -1224,6 +1230,9 @@ You help the user think through changes to their codebase:
   - request more file context when needed
 
 {planner_rules}
+
+CRITICAL RULE: You do NOT have write access. Do NOT output HTML, CSS, JavaScript, or implementation code. 
+If the user asks you to "build", "create", or "write" a file, you must ONLY output a step-by-step plan on how to do it.
 
 FILE ACCESS PROTOCOL:
 You do not have direct file access. To read, emit markers on their own lines:

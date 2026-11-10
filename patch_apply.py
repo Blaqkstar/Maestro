@@ -432,9 +432,17 @@ def apply_patches(
         p = root / path
         if had_crlf:
             new = new.replace("\n", "\r\n")
-        bak = p.with_suffix(p.suffix + ".bak")
-        if bak.exists():
-            bak.unlink()
-        p.rename(bak)
+        
+        # 1. Ensure parent directory exists (for new folders)
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        # 2. Only backup if the file already exists
+        if p.exists():
+            bak = p.with_suffix(p.suffix + ".bak")
+            if bak.exists():
+                bak.unlink()
+            p.rename(bak)
+            
+        # 3. Write the new file
         p.write_text(new, encoding="utf-8")
         print(f"  ✓ {path}")
