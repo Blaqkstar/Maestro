@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Maestro Chat</title>
+    <title>Maestro - Chat</title>
     <style>
       :root {
         --bg: #09090b;
@@ -1402,6 +1402,7 @@
         searchQuery: "",
         searchDebounce: null,
         updatingMode: false,
+        current_context: 0,
       };
 
       const $ = (id) => document.getElementById(id);
@@ -1621,9 +1622,16 @@
           el.textContent = "";
           return;
         }
+        const ctx = state.current.current_context || 0;
         const total = state.current.total_tokens || 0;
-        el.textContent =
-          total > 0 ? `session: ${formatTokens(total)} tokens` : "";
+
+        if (ctx > 0) {
+          el.textContent = `context: ${formatTokens(ctx)} / 65k`;
+        } else if (total > 0) {
+          el.textContent = `session: ${formatTokens(total)} tokens`;
+        } else {
+          el.textContent = "";
+        }
       }
       function formatTokens(n) {
         if (n < 1000) return String(n);
@@ -2072,6 +2080,9 @@
                       state.current.total_tokens =
                         (state.current.total_tokens || 0) +
                         (u.total_tokens || 0);
+                      if (u.prompt_tokens) {
+                        state.current.current_context = u.prompt_tokens;
+                      }
                       updateTokenCounter();
                       if (!assistantEl.querySelector(".msg-tokens")) {
                         const meta = assistantEl.querySelector(".msg-meta");

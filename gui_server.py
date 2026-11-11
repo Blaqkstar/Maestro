@@ -803,7 +803,7 @@ CHAT_MODELS = {
     "critic":  "google/gemma-4-12b-qat",
 }
 
-MAX_CONTEXT_TOKENS = 32768
+MAX_CONTEXT_TOKENS = 65536
 CONDENSE_THRESHOLD = 0.80
 
 
@@ -837,7 +837,7 @@ HISTORY:
 {history_text}
 """
 
-    model = "qwen2.5-3b-instruct"
+    model = CHAT_MODELS["planner"]
     try:
         r = requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
@@ -848,7 +848,7 @@ HISTORY:
                 "max_tokens": 1500,
                 "stream": False,
             },
-            timeout=120,
+            timeout=300,
         )
         r.raise_for_status()
         summary = r.json()["choices"][0]["message"]["content"].strip()
@@ -933,8 +933,8 @@ def _safe_read_chat(repo_root: str, rel_path: str):
         return None
     try:
         raw = p.read_bytes()
-        if len(raw) > 40000:
-            raw = raw[:40000]
+        if len(raw) > 150000:
+            raw = raw[:150000]
         return raw.decode("utf-8", errors="ignore")
     except OSError:
         return None
@@ -958,8 +958,8 @@ def _list_dir_chat(repo_root: str, rel_dir: str) -> str:
 
 # ─── Marker parsing ───────────────────────────────────────────────────
 
-_READ_RE = re.compile(r'<<<\s*READ\s+path\s*=\s*["\'\u201c\u201d\u2018\u2019]?([^"\'\u201c\u201d\u2018\u2019>\n]+)["\'\u201c\u201d\u2018\u2019]?\s*>>>', re.IGNORECASE)
-_LIST_RE = re.compile(r'<<<\s*LIST\s+dir\s*=\s*["\'\u201c\u201d\u2018\u2019]?([^"\'\u201c\u201d\u2018\u2019>\n]*)["\'\u201c\u201d\u2018\u2019]?\s*>>>', re.IGNORECASE)
+_READ_RE = re.compile(r'<<<\s*READ\s+path\s*=\s*["\'\u201c\u201d\u2018\u2019]?([^"\'\u201c\u201d\u2018\u2019>\n]+)["\'\u201c\u201d\u2018\u2019]?.*?>>>', re.IGNORECASE)
+_LIST_RE = re.compile(r'<<<\s*LIST\s+dir\s*=\s*["\'\u201c\u201d\u2018\u2019]?([^"\'\u201c\u201d\u2018\u2019>\n]*)["\'\u201c\u201d\u2018\u2019]?.*?>>>', re.IGNORECASE)
 
 
 def _parse_chat_markers(text: str) -> dict:
@@ -1259,7 +1259,10 @@ FILE TREE:
     final_content = ""
 
     while hops < 5:
-        current_tokens = sum(len(m.get("content", "")) // 4 for m in session["messages"])
+        est_tokens = sum(len(m.get("content", "")) // 3 for m in session["messages"])
+        last_actual = session.get("last_prompt_tokens", 0)
+        current_tokens = max(est_tokens, last_actual)
+
         if current_tokens > (MAX_CONTEXT_TOKENS * CONDENSE_THRESHOLD):
             yield sse({"event": "thinking", "text": "\n\n*Context window at 80%. Condensing history...*\n\n"})
             if _condense_session(session):
@@ -1284,6 +1287,7 @@ FILE TREE:
             elif evt["event"] == "usage":
                 turn_usage = evt["usage"]
                 session["total_tokens"] = session.get("total_tokens", 0) + turn_usage.get("total_tokens", 0)
+                session["last_prompt_tokens"] = turn_usage.get("prompt_tokens", 0)
                 yield sse(evt)
             elif evt["event"] == "stopped":
                 _save_session(session)
@@ -1311,7 +1315,7 @@ FILE TREE:
 
         tool_parts = []
         total_tool_chars = 0
-        MAX_TOOL_CHARS = 60000
+        MAX_TOOL_CHARS = 150000
 
         for path in markers["reads"]:
             if total_tool_chars > MAX_TOOL_CHARS:
@@ -1325,8 +1329,8 @@ FILE TREE:
                            "path": path, "error": "not found"})
                 tool_parts.append(f"=== {path} ===\n<file not found>")
             else:
-                if len(text) > 20000:
-                    text = text[:20000] + "\n… [file truncated to save context]"
+                if len(text) > 150000:
+                    text = text[:150000] + "\n… [file truncated to save context]"
 
                 yield sse({"event": "tool_result", "type": "read",
                            "path": path, "preview": text[:300],
@@ -1388,6 +1392,16 @@ def _build_worker_system(mode: str, project_rules: str, repo_root: str,
 {purpose}
 
 {worker_rules}
+
+SYSTEM CONSTRAINTS:
+- Port 5000 is reserved for the orchestrator's own GUI. If you are generating a web server (like Flask, FastAPI, or Node.js), you MUST configure it to run on port 5001 or 8000 instead.
+
+IMPORTANT RULES FOR PATCHES:
+- If you need to change 1 or 2 lines, do NOT rewrite the whole file. 
+- ONLY put the exact lines you want to change inside the SEARCH block. 
+- Include 2-3 lines of context above and below your change so the SEARCH block is unique.
+- The REPLACE block should ONLY contain your changed lines plus that surrounding context. Do NOT include the rest of the file.
+- YOU MUST NEVER SQUASH CODE ONTO A SINGLE LINE. Preserve all newlines and indentation exactly.
 
 FILE ACCESS PROTOCOL:
 To read, emit markers on their own lines:
@@ -1471,7 +1485,10 @@ def _chat_act_stream(session: dict):
     final_content = ""
 
     while hops < 8:
-        current_tokens = sum(len(m.get("content", "")) // 4 for m in session["messages"])
+        est_tokens = sum(len(m.get("content", "")) // 3 for m in session["messages"])
+        last_actual = session.get("last_prompt_tokens", 0)
+        current_tokens = max(est_tokens, last_actual)
+
         if current_tokens > (MAX_CONTEXT_TOKENS * CONDENSE_THRESHOLD):
             yield sse({"event": "thinking", "text": "\n\n*Context window at 80%. Condensing history...*\n\n"})
             if _condense_session(session):
@@ -1496,6 +1513,7 @@ def _chat_act_stream(session: dict):
             elif evt["event"] == "usage":
                 turn_usage = evt["usage"]
                 session["total_tokens"] = session.get("total_tokens", 0) + turn_usage.get("total_tokens", 0)
+                session["last_prompt_tokens"] = turn_usage.get("prompt_tokens", 0)
                 yield sse(evt)
             elif evt["event"] == "stopped":
                 _save_session(session)
@@ -1523,7 +1541,7 @@ def _chat_act_stream(session: dict):
 
             tool_parts = []
             total_tool_chars = 0
-            MAX_TOOL_CHARS = 60000
+            MAX_TOOL_CHARS = 150000
 
             for path in markers["reads"]:
                 if total_tool_chars > MAX_TOOL_CHARS:
@@ -1536,8 +1554,8 @@ def _chat_act_stream(session: dict):
                     yield sse({"event": "tool_result", "type": "read", "path": path, "error": "not found"})
                     tool_parts.append(f"=== {path} ===\n<file not found>")
                 else:
-                    if len(text) > 20000:
-                        text = text[:20000] + "\n… [file truncated to save context]"
+                    if len(text) > 150000:
+                        text = text[:150000] + "\n… [file truncated to save context]"
 
                     yield sse({"event": "tool_result", "type": "read", "path": path, "preview": text[:300], "size": len(text)})
                     tool_parts.append(f"=== {path} ===\n{text}")
@@ -1575,7 +1593,7 @@ def _chat_act_stream(session: dict):
         break
 
     # Auto-close if the model forgot the closing END PATCH tag.
-    if "<<<PATCH" in final_content.upper() and "<<<END PATCH" not in final_content.upper():
+    if "<<<PATCH" in final_content.upper() and not re.search(r'(<<<\s*END\s*PATCH\s*>>>|</\s*PATCH\s*>)', final_content, re.IGNORECASE):
         final_content = final_content.strip() + "\n<<<END PATCH>>>"
         if session["messages"] and session["messages"][-1]["role"] == "assistant":
             session["messages"][-1]["content"] = final_content

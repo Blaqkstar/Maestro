@@ -61,7 +61,7 @@ ANSI = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 PATCH_BLOCK_RE = re.compile(
     r'<<<\s*PATCH\s+path\s*=\s*["\']?([^"\'>\n]+)["\']?\s*>>>\s*'
     r'(.*?)'
-    r'(?:<<<\s*END\s*PATCH\s*>>>|$)',
+    r'(?=(?:<<<\s*PATCH\s+path\s*=)|(?:<<<\s*END\s*PATCH\s*>>>)|$)', 
     re.DOTALL | re.IGNORECASE,
 )
 
@@ -111,6 +111,9 @@ def parse_patches(raw: str) -> dict[str, list[tuple[str, str]]]:
     """Return {path: [(search, replace), ...]} with normalized strings."""
     raw = ANSI.sub("", raw)
     raw = _normalize(raw)
+
+    # Normalize the model's common malformed closing tags
+    raw = re.sub(r'<\s*/\s*PATCH\s*>{2,}', '<<<END PATCH>>>', raw, flags=re.IGNORECASE)
 
     # Fix common Qwen formatting bugs: squashed newlines around markers
     raw = raw.replace("<<<<<<< SEARCH ", "<<<<<<< SEARCH\n")
