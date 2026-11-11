@@ -54,6 +54,7 @@ import difflib
 import re
 import sys
 from pathlib import Path
+import ast
 
 
 ANSI = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
@@ -405,7 +406,21 @@ def apply_patches(
         if p.suffix == ".html" and not new.rstrip().endswith("</html>"):
             errors.append(f"{path}: HTML missing closing </html> after patch.")
             continue
+        
+        if p.suffix == ".html" and not new.rstrip().endswith("</html>"):
+            errors.append(f"{path}: HTML missing closing </html> after patch.")
+            continue
 
+        # 🛡️ NEW SAFETY CHECK: Python Syntax
+        if p.suffix == ".py":
+            try:
+                ast.parse(new)
+            except SyntaxError as e:
+                errors.append(f"{path}: Python SyntaxError at line {e.lineno}: {e.msg}")
+                continue
+
+        plan.append((path, old, new, had_crlf))
+        
         plan.append((path, old, new, had_crlf))
 
     if errors:

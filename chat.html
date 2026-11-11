@@ -1318,9 +1318,9 @@
           <input
             type="number"
             id="max-tokens"
-            value="4096"
+            value="65536"
             min="256"
-            max="32768"
+            max="65536"
             step="256"
           />
         </div>
@@ -1702,7 +1702,7 @@
         $("model-select").value = state.current.model || "";
         $("temp-slider").value = state.current.temperature ?? 0.2;
         $("temp-val").textContent = (+$("temp-slider").value).toFixed(2);
-        $("max-tokens").value = state.current.max_tokens ?? 4096;
+        $("max-tokens").value = state.current.max_tokens ?? 65536;
         $("critic-enabled").checked = state.current.critic_enabled !== false;
       }
       function renderMessages() {

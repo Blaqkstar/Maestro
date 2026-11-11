@@ -908,7 +908,7 @@ def _new_session(repo_root: str, mode: str = "plan") -> dict:
         "mode": mode,
         "model": CHAT_MODELS["planner"] if mode == "plan" else CHAT_MODELS["coder"],
         "temperature": 0.1,
-        "max_tokens": 32768,
+        "max_tokens": 65536,
         "title": "(new chat)",
         "messages": [],
         "pending_patches": None,
@@ -978,12 +978,10 @@ def _extract_status(content: str) -> dict:
             return {"type": "need_info", "question": line[len("NEED INFO:"):].strip()}
         if line.startswith("OPTIONS:"):
             return {"type": "options", "summary": line[len("OPTIONS:"):].strip()}
-            
-    # FALLBACK: If the model generated a long response with list items or headers,
-    # assume it generated a plan and just forgot the status line.
+
     if len(content) > 200 and ("1." in content or "- " in content or "##" in content):
         return {"type": "plan_ready", "summary": "Plan generated (missing status tag)."}
-        
+
     return {"type": "unknown"}
 
 
@@ -1003,6 +1001,7 @@ def _stream_chat_turn(model: str, system: str, messages: list,
     content = ""
     reasoning = ""
     usage = None
+    truncated = False
     try:
         with requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
@@ -1028,6 +1027,11 @@ def _stream_chat_turn(model: str, system: str, messages: list,
                     choices = chunk.get("choices") or []
                     if not choices:
                         continue
+
+                    if choices[0].get("finish_reason") == "length":
+                        truncated = True
+                        break
+
                     delta = choices[0].get("delta", {})
                     rc = delta.get("reasoning_content") or ""
                     cc = delta.get("content") or ""
@@ -1054,6 +1058,16 @@ def _stream_chat_turn(model: str, system: str, messages: list,
             "total_tokens": est_prompt + est_comp,
             "estimated": True,
         }}
+
+    if truncated:
+        yield {
+            "event": "error",
+            "message": (
+                "The model hit the output token limit and was truncated. "
+                "The patch was NOT applied. Increase max_tokens or use "
+                "targeted SEARCH/REPLACE edits instead of a full-file rewrite."
+            ),
+        }
 
 
 # ─── Patch preview ────────────────────────────────────────────────────
@@ -1183,7 +1197,7 @@ Review the patches."""
                     {"role": "user", "content": user},
                 ],
                 "temperature": 0.0,
-                "max_tokens": 150,
+                "max_tokens": 2048,
                 "stream": False,
             },
             timeout=180,
@@ -1231,7 +1245,7 @@ You help the user think through changes to their codebase:
 
 {planner_rules}
 
-CRITICAL RULE: You do NOT have write access. Do NOT output HTML, CSS, JavaScript, or implementation code. 
+CRITICAL RULE: You do NOT have write access. Do NOT output HTML, CSS, JavaScript, or implementation code.
 If the user asks you to "build", "create", or "write" a file, you must ONLY output a step-by-step plan on how to do it.
 
 FILE ACCESS PROTOCOL:
@@ -1276,7 +1290,7 @@ FILE TREE:
 
         for evt in _stream_chat_turn(
             session["model"], system, session["messages"], session["id"],
-            session.get("temperature", 0.2), session.get("max_tokens", 4096),
+            session.get("temperature", 0.2), session.get("max_tokens", 65536),
         ):
             if evt["event"] == "thinking":
                 turn_thinking += evt["text"]
@@ -1397,8 +1411,8 @@ SYSTEM CONSTRAINTS:
 - Port 5000 is reserved for the orchestrator's own GUI. If you are generating a web server (like Flask, FastAPI, or Node.js), you MUST configure it to run on port 5001 or 8000 instead.
 
 IMPORTANT RULES FOR PATCHES:
-- If you need to change 1 or 2 lines, do NOT rewrite the whole file. 
-- ONLY put the exact lines you want to change inside the SEARCH block. 
+- If you need to change 1 or 2 lines, do NOT rewrite the whole file.
+- ONLY put the exact lines you want to change inside the SEARCH block.
 - Include 2-3 lines of context above and below your change so the SEARCH block is unique.
 - The REPLACE block should ONLY contain your changed lines plus that surrounding context. Do NOT include the rest of the file.
 - YOU MUST NEVER SQUASH CODE ONTO A SINGLE LINE. Preserve all newlines and indentation exactly.
@@ -1502,7 +1516,7 @@ def _chat_act_stream(session: dict):
 
         for evt in _stream_chat_turn(
             worker_model, system, session["messages"], session["id"],
-            session.get("temperature", 0.2), session.get("max_tokens", 4096),
+            session.get("temperature", 0.2), session.get("max_tokens", 65536),
         ):
             if evt["event"] == "thinking":
                 turn_thinking += evt["text"]
