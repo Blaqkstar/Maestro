@@ -748,7 +748,9 @@ def save_batch():
             if os.path.exists(backup):
                 os.remove(backup)
             os.rename(f, backup)
-            Path(f).write_text(out, encoding="utf-8")
+            # newline="" prevents text-mode \n → \r\n doubling on Windows.
+            with open(f, "w", encoding="utf-8", newline="") as fh:
+                fh.write(out)
             saved.append({"file": f, "bytes": len(out)})
         except Exception as e:
             saved.append({"file": f, "error": str(e)})
@@ -805,6 +807,10 @@ CHAT_MODELS = {
 
 MAX_CONTEXT_TOKENS = 65536
 CONDENSE_THRESHOLD = 0.80
+
+# Runaway-generation guard. A single turn whose streamed content exceeds this
+# many characters is almost certainly a model looping; abort before parsing.
+MAX_TURN_CHARS = 120_000
 
 
 def _condense_session(session: dict) -> bool:
@@ -958,8 +964,18 @@ def _list_dir_chat(repo_root: str, rel_dir: str) -> str:
 
 # ─── Marker parsing ───────────────────────────────────────────────────
 
-_READ_RE = re.compile(r'<<<\s*READ\s+path\s*=\s*["\'\u201c\u201d\u2018\u2019]?([^"\'\u201c\u201d\u2018\u2019>\n]+)["\'\u201c\u201d\u2018\u2019]?.*?>>>', re.IGNORECASE)
-_LIST_RE = re.compile(r'<<<\s*LIST\s+dir\s*=\s*["\'\u201c\u201d\u2018\u2019]?([^"\'\u201c\u201d\u2018\u2019>\n]*)["\'\u201c\u201d\u2018\u2019]?.*?>>>', re.IGNORECASE)
+_READ_RE = re.compile(
+    r'<<<\s*READ\s+path\s*=\s*["\'\u201c\u201d\u2018\u2019]?'
+    r'([^"\'\u201c\u201d\u2018\u2019>\n]+)'
+    r'["\'\u201c\u201d\u2018\u2019]?[^\n]*?>+',
+    re.IGNORECASE,
+)
+_LIST_RE = re.compile(
+    r'<<<\s*LIST\s+dir\s*=\s*["\'\u201c\u201d\u2018\u2019]?'
+    r'([^"\'\u201c\u201d\u2018\u2019>\n]*)'
+    r'["\'\u201c\u201d\u2018\u2019]?[^\n]*?>+',
+    re.IGNORECASE,
+)
 
 
 def _parse_chat_markers(text: str) -> dict:
@@ -1002,6 +1018,7 @@ def _stream_chat_turn(model: str, system: str, messages: list,
     reasoning = ""
     usage = None
     truncated = False
+    runaway = False
     try:
         with requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
@@ -1041,6 +1058,9 @@ def _stream_chat_turn(model: str, system: str, messages: list,
                     if cc:
                         content += cc
                         yield {"event": "content", "text": cc}
+                        if len(content) > MAX_TURN_CHARS:
+                            runaway = True
+                            break
                 except (json.JSONDecodeError, KeyError):
                     continue
     except Exception as e:
@@ -1058,6 +1078,16 @@ def _stream_chat_turn(model: str, system: str, messages: list,
             "total_tokens": est_prompt + est_comp,
             "estimated": True,
         }}
+
+    if runaway:
+        yield {
+            "event": "error",
+            "message": (
+                f"Output exceeded {MAX_TURN_CHARS} characters and was aborted. "
+                f"The model appears to be looping; no patch will be applied. "
+                f"Try a more targeted instruction."
+            ),
+        }
 
     if truncated:
         yield {
@@ -1078,7 +1108,9 @@ def _preview_patches(repo_root: str, patches: dict) -> dict:
     Returns {'diff': str, 'errors': [...], 'warnings': [...]}.
     """
     try:
-        from patch_apply import apply_patches_to_file, PatchError
+        from patch_apply import (
+            apply_patches_to_file, _normalize, _split_for_diff, PatchError,
+        )
     except ImportError as e:
         return {"diff": "", "errors": [f"patch_apply import failed: {e}"],
                 "warnings": []}
@@ -1089,11 +1121,14 @@ def _preview_patches(repo_root: str, patches: dict) -> dict:
     for path, pairs in patches.items():
         p = Path(repo_root) / path
 
-        old = ""
+        # Read raw bytes (newline="") so _normalize() can repair \r\r\n
+        # before matching. Path.read_text() would pre-collapse to \n\n.
+        raw_old = ""
         if p.exists():
-            old = p.read_text(encoding="utf-8-sig", errors="ignore")
+            with open(p, "r", encoding="utf-8-sig", errors="ignore", newline="") as fh:
+                raw_old = fh.read()
 
-        old_norm = old.replace("\r\n", "\n").replace("\r", "\n")
+        old_norm = _normalize(raw_old)
 
         try:
             new, warns = apply_patches_to_file(old_norm, pairs)
@@ -1102,8 +1137,8 @@ def _preview_patches(repo_root: str, patches: dict) -> dict:
                 warnings_out.append(f"{path}: {w}")
 
             diff = "".join(difflib.unified_diff(
-                old_norm.splitlines(keepends=True),
-                new.splitlines(keepends=True),
+                _split_for_diff(old_norm),
+                _split_for_diff(new),
                 fromfile=f"a/{path}",
                 tofile=f"b/{path}",
             ))
@@ -1116,56 +1151,24 @@ def _preview_patches(repo_root: str, patches: dict) -> dict:
     return {"diff": "\n".join(diffs), "errors": errors, "warnings": warnings_out}
 
 
-def _run_critic(instruction: str, patches: dict, repo_root: str,
+def _run_critic(instruction: str, preview_diff: str, repo_root: str,
                 project_rules: str, mode: str) -> dict:
-    """Run the critic on validated patches. Returns {approved, reason, model}."""
+    """Run the critic on an already-validated diff. Returns {approved, reason, model}.
+
+    approved is True / False / None. None means the critic could not reach
+    a verdict (timeout, loop, truncation) and the change should be surfaced
+    to the user without a critic badge.
+    """
     critic_role = "critic"
-
-    patch_blocks = []
-    for path, pairs in patches.items():
-        buf = [f"=== {path} ==="]
-        for i, (search, replace) in enumerate(pairs, 1):
-            buf.append(f"--- SEARCH #{i} ---")
-            buf.append(search)
-            buf.append(f"--- REPLACE #{i} ---")
-            buf.append(replace)
-        patch_blocks.append("\n".join(buf))
-    patches_text = "\n\n".join(patch_blocks)
-
-    originals = []
-    total_chars = 0
-    for path in patches.keys():
-        try:
-            p = (Path(repo_root) / path).resolve()
-            p.relative_to(Path(repo_root).resolve())
-            if not p.is_file():
-                continue
-            text = p.read_text(encoding="utf-8-sig", errors="ignore")
-            text = text.replace("\r\n", "\n").replace("\r", "\n")
-            if len(text) > 20000:
-                text = text[:20000] + "\n… [truncated]"
-            if total_chars + len(text) > 40000:
-                break
-            originals.append(f"=== {path} ===\n{text}")
-            total_chars += len(text)
-        except (OSError, ValueError):
-            continue
-    originals_text = "\n\n".join(originals)
-
     critic_rules = rules_for(project_rules, critic_role, header=False)
-
-    focus = "Check for syntax errors, rule violations (§2b/§2c), or reformatting."
 
     system = f"""You are a strict senior reviewer evaluating a proposed change.
 
 You will see:
   • USER INSTRUCTION (what the user asked for)
-  • PATCHES (SEARCH/REPLACE pairs a worker produced)
-  • ORIGINAL FILES (current content of the files being patched)
+  • UNIFIED DIFF (the exact change that has already been validated to apply)
 
 {critic_rules}
-
-{focus}
 
 Respond with EXACTLY ONE of:
 
@@ -1173,18 +1176,35 @@ Respond with EXACTLY ONE of:
 
   FAIL: <one-sentence reason>
 
-No prose, no markdown, no explanations beyond the reason line."""
+No prose, no markdown, no explanations beyond the reason line.
+
+IMPORTANT — do NOT re-verify that the diff applies. The runtime has
+already confirmed that SEARCH matches the file. Your job is to judge
+whether the change matches the instruction and obeys the rules. If both
+are true, output APPROVED immediately. Do not deliberate further.
+
+GROUNDING REQUIREMENT:
+Before outputting FAIL, quote the EXACT line from the UNIFIED DIFF that
+demonstrates the defect. If you cannot quote a specific diff line that
+literally shows the problem, output APPROVED.
+
+Do NOT speculate about content that is not visible in the diff. Do NOT
+paraphrase or re-type HTML tags — always copy them character-for-character
+from the diff.
+
+Common false-positive: HTML tags like </span>, <body>, </div> ending in
+'>'. The '>' is always present in a well-formed diff; do not claim it is
+missing unless the diff line genuinely lacks it."""
+
+
 
     user = f"""USER INSTRUCTION:
 {instruction}
 
-PATCHES:
-{patches_text}
+UNIFIED DIFF:
+{preview_diff}
 
-ORIGINAL FILES:
-{originals_text}
-
-Review the patches."""
+Review the diff."""
 
     model = CHAT_MODELS["critic"]
     try:
@@ -1197,18 +1217,28 @@ Review the patches."""
                     {"role": "user", "content": user},
                 ],
                 "temperature": 0.0,
-                "max_tokens": 2048,
+                "max_tokens": 8192,
                 "stream": False,
             },
-            timeout=180,
+            timeout=300,
         )
         r.raise_for_status()
-        msg = r.json()["choices"][0]["message"]
+        choice = r.json()["choices"][0]
+        finish = choice.get("finish_reason")
+        msg = choice["message"]
         raw = (msg.get("content") or "").strip()
         if not raw:
             raw = (msg.get("reasoning_content") or "").strip()
     except Exception as e:
-        return {"approved": True, "reason": "", "model": model, "error": str(e)}
+        return {"approved": None, "reason": "", "model": model, "error": str(e)}
+
+    # Truncated — the critic never finished deliberating. Do not trust.
+    if finish == "length":
+        return {
+            "approved": None,
+            "reason": "critic hit max_tokens before emitting a verdict",
+            "model": model,
+        }
 
     raw_clean = raw.replace("<!-- APPROVED -->", "").strip()
     raw_clean = re.sub(r'^```[a-zA-Z]*\n?|\n?```$', '', raw_clean).strip()
@@ -1217,7 +1247,14 @@ Review the patches."""
     if m:
         return {"approved": False, "reason": m.group(1).strip(), "model": model}
 
-    return {"approved": True, "reason": "", "model": model}
+    if re.search(r"\bAPPROVED\b", raw_clean) or not raw_clean:
+        return {"approved": True, "reason": "", "model": model}
+
+    return {
+        "approved": None,
+        "reason": f"critic verdict unclear: {raw_clean[:120]}",
+        "model": model,
+    }
 
 
 # ─── Plan mode generator ──────────────────────────────────────────────
@@ -1290,7 +1327,7 @@ FILE TREE:
 
         for evt in _stream_chat_turn(
             session["model"], system, session["messages"], session["id"],
-            session.get("temperature", 0.2), session.get("max_tokens", 65536),
+            session.get("temperature", 0.2), session.get("max_tokens", 8192),
         ):
             if evt["event"] == "thinking":
                 turn_thinking += evt["text"]
@@ -1417,6 +1454,66 @@ IMPORTANT RULES FOR PATCHES:
 - The REPLACE block should ONLY contain your changed lines plus that surrounding context. Do NOT include the rest of the file.
 - YOU MUST NEVER SQUASH CODE ONTO A SINGLE LINE. Preserve all newlines and indentation exactly.
 
+OUTPUT FORMAT — DO NOT EMIT PLAN-MODE MARKERS:
+You are in CODE mode, not PLAN mode. Do NOT end responses with
+"PLAN READY:", "NEED INFO:", or "OPTIONS:". Those markers are for a
+different mode. Answer the user's question directly and stop.
+
+If you are answering a question (no patch), just answer it.
+If you are producing a patch, emit <<<PATCH>>> blocks and stop.
+Nothing else.
+
+NO-OP BEHAVIOUR (read carefully):
+- If the requested change is already present in the file, respond in plain
+  text: "No change needed — <brief reason>." Do NOT emit a <<<PATCH>>> block.
+  Example: if the user asks to "refactor greet to use an f-string" and the
+  file already contains `return f'Hi, {{name}}'`, the correct response is
+  prose, not a patch.
+- NEVER emit an empty SEARCH block unless you are (a) creating a new file or
+  (b) replacing the ENTIRE contents of an existing file. A single
+  <<<PATCH>>> block must contain AT MOST one empty SEARCH, and it must be
+  the ONLY pair in the block.
+- If every pair in your draft would have SEARCH == REPLACE, stop and answer
+  in plain text instead. Identity patches are never useful.
+  
+INFORMATIONAL REQUESTS (read carefully):
+The user may ask QUESTIONS rather than request EDITS. Examples:
+  - "Read X. Tell me Y."
+  - "What does function Z do?"
+  - "How many functions are in file.py?"
+  - "Explain this code."
+  - "Where is X defined?"
+
+For these, ANSWER THE QUESTION DIRECTLY in prose. Do NOT emit a
+<<<PATCH>>> block. The absence of a patch is the CORRECT response.
+
+Common forms that mean "answer, don't edit":
+  - "Tell me..." / "Explain..." / "Describe..." / "Show me..."
+  - "What is..." / "What does..." / "Where is..." / "How many..."
+  - Any question ending in "?"
+
+Do not preface your answer with "Let me extract it for you" or similar
+filler, and do not re-read a file you have already read this turn.
+Answer the question. That's it.
+  
+RANGE AND BULK EDITS:
+- When the user specifies a RANGE of items (e.g., "delete functions 400
+  through 499", "rename lines 100-200", "update functions 5-10"), your
+  SEARCH block MUST cover the ENTIRE range. Do NOT truncate down to just
+  the boundary items. Deleting only calculate_metric_498 and
+  calculate_metric_499 is NOT a correct response to "delete 400 through
+  499" — the SEARCH must contain all 100 functions from 400 through 499.
+- If the range is >20 items, you may emit MULTIPLE SEARCH/REPLACE pairs
+  inside the same <<<PATCH>>> block — one per contiguous chunk — but
+  every pair must be part of the requested range.
+- If the range is so large that even a chunked patch is unwieldy (>50% of
+  the file), use a full-file rewrite (empty SEARCH) instead. A full
+  rewrite that deletes 400-499 is correct; a partial patch that deletes
+  only 498-499 is not.
+- The worker prompt's "if you need to change 1 or 2 lines, do NOT rewrite
+  the whole file" rule applies to SMALL edits. Range edits are not small
+  edits — size the patch to the request.
+
 FILE ACCESS PROTOCOL:
 To read, emit markers on their own lines:
   <<<READ path="relative/file.py">>>
@@ -1437,6 +1534,28 @@ You MUST use proper newlines (line breaks) inside the SEARCH and REPLACE blocks.
   <the NEW lines that should replace it>
   >>>>>>> REPLACE
   <<<END PATCH>>>
+  
+MARKER SYNTAX (critical — do not abbreviate):
+The markers you emit are protocol markers, NOT HTML tags. Spell them
+exactly:
+
+  <<<READ path="file.py">>>       (three < on the left, three > on the right)
+  <<<LIST dir="some/dir">>>       (three < and three >)
+  <<<PATCH path="file.py">>>      (three < and three >)
+  <<<END PATCH>>>                 (three < and three >)
+  <<<<<<< SEARCH                  (seven <)
+  =======                          (seven =)
+  >>>>>>> REPLACE                 (seven >)
+
+DO NOT shorten the closing brackets. These are WRONG and will be silently
+ignored:
+
+  <<<PATCH path="file.py">        (one > — WRONG)
+  <<<PATCH path="file.py">>       (two > — WRONG)
+  <<<READ path="file.py">         (one > — WRONG)
+
+NEVER emit HTML-style closing tags like </file>, </PATCH>, </patch>, or
+</read>. These markers are not HTML elements and do not have closing tags.
 
 EXAMPLE 1 — targeted edit. Add a comment above a line that already exists:
 
@@ -1484,6 +1603,18 @@ def _chat_act_stream(session: dict):
     mode = session["mode"]
     if mode == "act":
         mode = "code"
+        
+    # Extract the ORIGINAL user instruction once, at the top. Ignore any
+    # correction messages appended by the critic-retry path. The critic
+    # must always compare against the real user request, not our feedback.
+    original_user_msg = next(
+        (m["content"] for m in reversed(session["messages"])
+         if m["role"] == "user"
+         and not m.get("is_tool_result")
+         and not m.get("is_correction")),
+        "",
+    )
+    
 
     yield sse({"event": "start", "mode": mode})
 
@@ -1516,7 +1647,7 @@ def _chat_act_stream(session: dict):
 
         for evt in _stream_chat_turn(
             worker_model, system, session["messages"], session["id"],
-            session.get("temperature", 0.2), session.get("max_tokens", 65536),
+            session.get("temperature", 0.2), session.get("max_tokens", 8192),
         ):
             if evt["event"] == "thinking":
                 turn_thinking += evt["text"]
@@ -1524,6 +1655,19 @@ def _chat_act_stream(session: dict):
             elif evt["event"] == "content":
                 yield sse(evt)
                 turn_content += evt["text"]
+                # Early loop detector: repeated empty SEARCH markers.
+                if len(turn_content) > 4000:
+                    if turn_content.count("<<<<<<< SEARCH\n=======") > 10:
+                        CHAT_STOP[session["id"]] = True
+                        yield sse({
+                            "event": "error",
+                            "message": (
+                                "Detected 10+ empty SEARCH blocks — "
+                                "model is looping; aborting turn."
+                            ),
+                        })
+                        _save_session(session)
+                        return
             elif evt["event"] == "usage":
                 turn_usage = evt["usage"]
                 session["total_tokens"] = session.get("total_tokens", 0) + turn_usage.get("total_tokens", 0)
@@ -1613,37 +1757,135 @@ def _chat_act_stream(session: dict):
             session["messages"][-1]["content"] = final_content
 
     try:
-        from patch_apply import parse_patches
+        from patch_apply import parse_patches, PatchError
     except ImportError as e:
         yield sse({"event": "error", "message": f"patch_apply import failed: {e}"})
         return
 
-    patches = parse_patches(final_content)
-    if not patches:
-        err_msg = "The model did not output a valid <<<PATCH>>> block."
-        if not final_content.strip():
-            err_msg = "The model returned an empty response. Check LM Studio logs for context limit errors."
-        elif "<<<PATCH" in final_content and "<<<END PATCH" not in final_content:
-            err_msg = "The model started a patch but ran out of tokens before finishing it. Increase your context length in LM Studio."
-
-        session["last_error"] = [err_msg]
+    try:
+        patches = parse_patches(final_content)
+    except PatchError as e:
+        session["last_error"] = [str(e)]
         _save_session(session)
+        yield sse({"event": "error", "message": str(e)})
         yield sse({"event": "status", "status": {"type": "no_patches"}})
         yield sse({"event": "complete"})
         return
 
-    preview = _preview_patches(repo_root, patches)
-    if preview["errors"]:
-        session["last_error"] = preview["errors"]
+    if not patches:
+        final_upper = final_content.upper()
+        attempted_patch = "<<<PATCH" in final_upper
+        completed_patch = bool(re.search(r'<<<\s*END\s*PATCH', final_upper))
+
+        # ── Real failure modes ─────────────────────────────────────────────
+        if not final_content.strip():
+            err_msg = ("The model returned an empty response. "
+                       "Check LM Studio logs for context limit errors.")
+            session["last_error"] = [err_msg]
+            _save_session(session)
+            yield sse({"event": "status", "status": {"type": "no_patches"}})
+            yield sse({"event": "complete"})
+            return
+
+        if attempted_patch and not completed_patch:
+            err_msg = ("The model started a patch but ran out of tokens "
+                    "before finishing it. Increase your context length "
+                    "in LM Studio.")
+            session["last_error"] = [err_msg]
+            _save_session(session)
+            yield sse({"event": "status", "status": {"type": "no_patches"}})
+            yield sse({"event": "complete"})
+            return
+
+        if attempted_patch and completed_patch:
+            session["last_error"] = [
+                "The model emitted a patch block that could not be "
+                "parsed. Check LM Studio logs and the model's raw output."
+            ]
+            _save_session(session)
+            yield sse({"event": "status", "status": {"type": "no_patches"}})
+            yield sse({"event": "complete"})
+            return
+
+        # ── Informational / no-op reply — NOT an error ─────────────────
+        session["last_error"] = None
         _save_session(session)
         yield sse({
-            "event": "patch_errors",
-            "errors": preview["errors"],
-            "warnings": preview.get("warnings", []),
-            "diff": preview["diff"],
+            "event": "status",
+            "status": {
+                "type": "no_patches",
+                "reason": "Informational response — no code changes.",
+            },
         })
         yield sse({"event": "complete"})
         return
+
+    # Every pair is identity → nothing to apply; treat as a no-op.
+    all_identity = all(
+        all(s == r for s, r in pairs) for pairs in patches.values()
+    )
+    if all_identity:
+        session["last_error"] = None
+        _save_session(session)
+        yield sse({"event": "status",
+                   "status": {"type": "no_patches",
+                              "reason": "Patches were identity — no change."}})
+        yield sse({"event": "complete"})
+        return
+
+    preview = _preview_patches(repo_root, patches)
+
+    # Single-shot retry: if any error is a "unique context" style failure,
+    # give the model one corrective turn before giving up.
+    if preview["errors"]:
+        retryable = any(
+            "appears more than once" in e or "not found" in e
+            for e in preview["errors"]
+        )
+        if retryable and not session.get("_retried"):
+            session["_retried"] = True
+            correction = (
+                "PATCH VALIDATION FAILED for the previous attempt.\n"
+                "Errors:\n  " + "\n  ".join(preview["errors"]) + "\n\n"
+                "Before re-trying, check ALL of these:\n"
+                "1. Does the SEARCH text ACTUALLY exist in the CURRENT file "
+                "content you just read? Re-verify against the FRESH tool "
+                "result, not against what you remember from earlier in the "
+                "conversation.\n"
+                "2. If the user asked you to ADD, INSERT, APPEND, or RESTORE "
+                "content, that content does NOT currently exist. Do not "
+                "SEARCH for it. Instead, SEARCH for a nearby ANCHOR that IS "
+                "in the current file (e.g., the last function definition "
+                "before the insertion point), and put the anchor plus the "
+                "new content in the REPLACE block.\n"
+                "3. If you previously DELETED the content you are now trying "
+                "to modify, it is gone. You must CREATE it fresh, not search "
+                "for it.\n"
+                "4. If SEARCH appears more than once, extend it with more "
+                "surrounding context.\n\n"
+                "Re-read the file if needed and produce a corrected "
+                "<<<PATCH>>> block."
+            )
+            session["messages"].append({
+                "role": "user", "content": correction,
+                "timestamp": datetime.now().isoformat(),
+            })
+            _save_session(session)
+            yield sse({"event": "thinking",
+                       "text": "\n\n*Patch failed validation. Retrying with corrective feedback...*\n\n"})
+            # Recursive-ish: fall through to re-run the inner loop.
+            yield from _chat_act_stream(session)
+            return
+
+        session["last_error"] = preview["errors"]
+        _save_session(session)
+        yield sse({"event": "patch_errors",
+                   "errors": preview["errors"],
+                   "warnings": preview.get("warnings", []),
+                   "diff": preview["diff"]})
+        yield sse({"event": "complete"})
+        return
+    session["_retried"] = False
 
     session["last_error"] = None
 
@@ -1652,17 +1894,15 @@ def _chat_act_stream(session: dict):
     critic_model = None
     if session.get("critic_enabled", True):
         yield sse({"event": "critic_start", "mode": mode})
-        user_msg = next(
-            (m["content"] for m in reversed(session["messages"])
-             if m["role"] == "user" and not m.get("is_tool_result")),
-            "",
+        critic = _run_critic(
+            original_user_msg, preview["diff"], repo_root, project_rules, mode,
         )
-        critic = _run_critic(user_msg, patches, repo_root, project_rules, mode)
         critic_model = critic.get("model")
-        if critic["approved"]:
+
+        if critic["approved"] is True:
             critic_status = "approved"
             yield sse({"event": "critic_approved", "model": critic_model})
-        else:
+        elif critic["approved"] is False:
             critic_status = "rejected"
             critic_reason = critic["reason"]
             yield sse({
@@ -1670,7 +1910,17 @@ def _chat_act_stream(session: dict):
                 "reason": critic_reason,
                 "model": critic_model,
             })
+        else:
+            # Skipped / abstained — critic couldn't reach a verdict.
+            critic_status = "skipped"
+            critic_reason = critic.get("reason", "")
+            yield sse({
+                "event": "critic_skipped",
+                "reason": critic_reason,
+                "model": critic_model,
+            })
 
+    session["_retried_critic"] = False   # reset on success or manual reject
     session["pending_patches"] = patches
     session["pending_diff"] = preview["diff"]
     session["pending_critic_status"] = critic_status

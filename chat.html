@@ -1318,7 +1318,7 @@
           <input
             type="number"
             id="max-tokens"
-            value="65536"
+            value="8192"
             min="256"
             max="65536"
             step="256"
@@ -1702,7 +1702,7 @@
         $("model-select").value = state.current.model || "";
         $("temp-slider").value = state.current.temperature ?? 0.2;
         $("temp-val").textContent = (+$("temp-slider").value).toFixed(2);
-        $("max-tokens").value = state.current.max_tokens ?? 65536;
+        $("max-tokens").value = state.current.max_tokens ?? 8192;
         $("critic-enabled").checked = state.current.critic_enabled !== false;
       }
       function renderMessages() {
@@ -1885,10 +1885,14 @@
           plan_ready: "Plan Ready",
           need_info: "Need Info",
           options: "Options",
-          no_patches: "No Patches",
+          no_patches: "No Changes",
           unknown: "Done",
         };
-        return `<div><span class="status-pill ${status.type}">${labels[status.type] || status.type}</span></div>`;
+        const label = labels[status.type] || status.type;
+        const hint = status.reason
+          ? `<div style="font-size:11px;color:var(--text-3);margin-top:4px">${escapeHtml(status.reason)}</div>`
+          : "";
+        return `<div><span class="status-pill ${status.type}">${label}</span>${hint}</div>`;
       }
       function colorDiff(diff) {
         return escapeHtml(diff)
@@ -2238,6 +2242,20 @@
             ctx.setCriticChip(chip);
             break;
           }
+          case "critic_retry": {
+            if (criticChip) criticChip.remove();
+            criticChip = null;
+            const badge = document.createElement("div");
+            badge.className = "critic-chip";
+            badge.innerHTML = `⚠️ Critic rejected — retrying…`;
+            badge.style.background = "rgba(234,179,8,0.08)";
+            badge.style.borderColor = "rgba(234,179,8,0.25)";
+            badge.style.color = "var(--yellow)";
+            statusEl.appendChild(badge);
+            criticChip = badge;
+            scrollToBottom();
+            break;
+          }
           case "critic_approved": {
             ctx.onCriticApproved(ctx.getCriticChip(), evt.model);
             ctx.setCriticChip(null);
@@ -2582,7 +2600,7 @@
           $("model-select").value = state.current.model || "";
           $("temp-slider").value = state.current.temperature ?? 0.2;
           $("temp-val").textContent = (+$("temp-slider").value).toFixed(2);
-          $("max-tokens").value = state.current.max_tokens ?? 4096;
+          $("max-tokens").value = state.current.max_tokens ?? 8192;
           $("critic-enabled").checked = state.current.critic_enabled !== false;
         }
       }

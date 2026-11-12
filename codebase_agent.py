@@ -583,6 +583,8 @@ def validate_edit(root: Path, path: str, content: str):
 
 
 def apply_or_preview(root: Path, edits: dict, dry_run: bool):
+    from patch_apply import _split_for_diff
+    
     plan, errors = [], []
     for path, content in edits.items():
         ok, msg = validate_edit(root, path, content)
@@ -600,8 +602,8 @@ def apply_or_preview(root: Path, edits: dict, dry_run: bool):
             p   = root / path
             old = p.read_text(encoding="utf-8", errors="ignore") if p.exists() else ""
             sys.stdout.writelines(difflib.unified_diff(
-                old.splitlines(keepends=True),
-                new.splitlines(keepends=True),
+                _split_for_diff(old),
+                _split_for_diff(new),
                 fromfile=f"a/{path}", tofile=f"b/{path}",
             ))
             print()
@@ -611,7 +613,10 @@ def apply_or_preview(root: Path, edits: dict, dry_run: bool):
     for path, new in plan:
         p = root / path
         if p.exists():
-            old = p.read_text(encoding="utf-8", errors="ignore")
+            # Read raw with newline="" so CRLF detection is accurate and
+            # no pre-translation happens on the original content.
+            with open(p, "r", encoding="utf-8", errors="ignore", newline="") as fh:
+                old = fh.read()
             if "\r\n" in old:
                 new = new.replace("\n", "\r\n")
             bak = p.with_suffix(p.suffix + ".bak")
@@ -619,7 +624,9 @@ def apply_or_preview(root: Path, edits: dict, dry_run: bool):
                 bak.unlink()
             p.rename(bak)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(new, encoding="utf-8")
+        # newline="" prevents text-mode \n → \r\n doubling on Windows.
+        with open(p, "w", encoding="utf-8", newline="") as fh:
+            fh.write(new)
         print(f"  ✓ {path}")
 
 
@@ -702,7 +709,10 @@ def main():
         from patch_apply import parse_patches, apply_patches, PatchError
 
         def try_apply(response):
-            patches = parse_patches(response)
+            try:
+                patches = parse_patches(response)
+            except PatchError as e:
+                return None, f"patch parse failed: {e}"
             if not patches:
                 return None, "no <<<PATCH>>> blocks found"
             requested_set = set(edit)

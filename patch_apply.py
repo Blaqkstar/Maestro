@@ -39,6 +39,7 @@ RULES ENFORCED ON APPLY:
   - Result must be at least 50% of original byte size (truncation guard).
   - HTML results must still end with </html>.
   - All patches must validate before any file is written (atomic batch).
+  - Identity patches (SEARCH == REPLACE, or every pair a no-op) never write.
 
 ON FAILURE: dumps a per-patch repr (first 80 chars, char count, line count)
 of every SEARCH/REPLACE so the raw content is visible for debugging.
@@ -59,10 +60,15 @@ import ast
 
 ANSI = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
+# Cap on how many (search, replace) pairs one <<<PATCH>>> block may contain.
+# A well-behaved edit is 1–5 pairs. Hundreds means the model is looping and
+# the block is not a real edit.
+MAX_PAIRS_PER_BLOCK = 20
+
 PATCH_BLOCK_RE = re.compile(
-    r'<<<\s*PATCH\s+path\s*=\s*["\']?([^"\'>\n]+)["\']?\s*>>>\s*'
+    r'<<<\s*PATCH\s+path\s*=\s*["\']?([^"\'>\n]+)["\']?\s*>+\s*'
     r'(.*?)'
-    r'(?=(?:<<<\s*PATCH\s+path\s*=)|(?:<<<\s*END\s*PATCH\s*>>>)|$)', 
+    r'(?=(?:<<<\s*PATCH\s+path\s*=)|(?:<<<\s*END\s*PATCH\s*>+)|$)',
     re.DOTALL | re.IGNORECASE,
 )
 
@@ -86,8 +92,26 @@ def _normalize(text: str) -> str:
     """Canonicalize BOM and line endings for reliable matching."""
     if text and text[0] == "\ufeff":
         text = text[1:]
-    return text.replace("\r\n", "\n").replace("\r", "\n")
+    # Collapse runs of CR immediately followed by LF ("\r+\n") to a single
+    # LF. This repairs double-CRLF corruption (\r\r\n) introduced by text-
+    # mode writes on Windows, and also handles any n-CR variant. Bare \r
+    # mid-line (rare) is still normalized below — no data is lost.
+    text = re.sub(r'\r+\n', '\n', text)
+    return text.replace("\r", "\n")
 
+def _split_for_diff(s: str) -> list[str]:
+    """Split into lines, ensuring every line ends with a newline.
+
+    difflib.unified_diff emits lines verbatim; if the source content
+    lacks a trailing newline, its last line is emitted without one and
+    the next line's prefix concatenates onto it ("-old+new"). Appending
+    a trailing newline before splitting prevents this.
+    """
+    if not s:
+        return []
+    if not s.endswith("\n"):
+        s = s + "\n"
+    return s.splitlines(keepends=True)
 
 # ---------------------------------------------------------------------------
 # Auto-repair
@@ -109,9 +133,19 @@ def _repair_missing_replace_marker(body: str) -> str:
 # ---------------------------------------------------------------------------
 
 def parse_patches(raw: str) -> dict[str, list[tuple[str, str]]]:
-    """Return {path: [(search, replace), ...]} with normalized strings."""
+    """Return {path: [(search, replace), ...]} with normalized strings.
+
+    Raises PatchError when a block is malformed in a way that indicates the
+    model is looping or issuing conflicting edits (hundreds of pairs,
+    empty SEARCH combined with other pairs).
+    """
     raw = ANSI.sub("", raw)
     raw = _normalize(raw)
+    
+    # Qwen sometimes closes its own markers with HTML-style closing tags,
+    # especially when the task involves HTML/CSS/JS files. Strip them.
+    raw = re.sub(r'</\s*(?:file|patch|read|list|end[\s_]*patch)\s*>',
+             '', raw, flags=re.IGNORECASE)
 
     # Normalize the model's common malformed closing tags
     raw = re.sub(r'<\s*/\s*PATCH\s*>{2,}', '<<<END PATCH>>>', raw, flags=re.IGNORECASE)
@@ -128,12 +162,37 @@ def parse_patches(raw: str) -> dict[str, list[tuple[str, str]]]:
     for path, body in PATCH_BLOCK_RE.findall(raw):
         path = path.strip()
         body = _repair_missing_replace_marker(body)
-        pairs = SR_RE.findall(body)
+        raw_pairs = SR_RE.findall(body)
+        if not raw_pairs:
+            continue
+
+        pairs = [(_normalize(s), _normalize(r)) for s, r in raw_pairs]
+
+        # Drop no-ops where both SEARCH and REPLACE are empty. These are
+        # noise the model sometimes emits after a legitimate patch.
+        pairs = [(s, r) for s, r in pairs if s.strip() or r.strip()]
         if not pairs:
             continue
-        result.setdefault(path, []).extend(
-            (_normalize(s), _normalize(r)) for s, r in pairs
-        )
+
+        # Hard cap: hundreds of pairs = model looping, not a real edit.
+        if len(pairs) > MAX_PAIRS_PER_BLOCK:
+            raise PatchError(
+                f"{path}: {len(pairs)} SEARCH/REPLACE pairs "
+                f"(max {MAX_PAIRS_PER_BLOCK}). Model is looping — "
+                f"refusing to parse this block."
+            )
+
+        # Empty SEARCH means "replace the whole file." It cannot be combined
+        # with other pairs; the model would be issuing two conflicting edits
+        # to the same content.
+        if any(not s.strip() for s, _ in pairs) and len(pairs) > 1:
+            raise PatchError(
+                f"{path}: empty SEARCH block cannot be combined with other "
+                f"SEARCH/REPLACE pairs. Use either a single full-rewrite "
+                f"(empty SEARCH) OR targeted edits."
+            )
+
+        result.setdefault(path, []).extend(pairs)
 
     return result
 
@@ -303,6 +362,7 @@ def apply_patches_to_file(
 ) -> tuple[str, list[str]]:
     """Apply (search, replace) pairs in order. Return (new_content, warnings)."""
     warnings: list[str] = []
+    original = content
 
     for i, (search, replace) in enumerate(pairs, 1):
         try:
@@ -332,6 +392,9 @@ def apply_patches_to_file(
             )
 
         # "structural" is documented but not wired into _locate yet.
+
+    if pairs and content == original:
+        warnings.append("all patches were identity — no change written")
 
     return content, warnings
 
@@ -379,13 +442,16 @@ def apply_patches(
             errors.append(f"{path}: path escapes repository root")
             continue
 
+        # Read raw bytes (newline="" disables text-mode translation) so
+        # _normalize() can repair \r\r\n corruption before matching.
         if p.exists():
-            raw_old = p.read_text(encoding="utf-8-sig", errors="ignore")
+            with open(p, "r", encoding="utf-8-sig", errors="ignore", newline="") as fh:
+                raw_old = fh.read()
         else:
             raw_old = ""
 
         had_crlf = "\r\n" in raw_old
-        old = raw_old.replace("\r\n", "\n").replace("\r", "\n")
+        old = _normalize(raw_old)
 
         try:
             new, warns = apply_patches_to_file(old, pairs)
@@ -395,6 +461,11 @@ def apply_patches(
 
         for w in warns:
             print(f"  ⚠️  {path}: {w}")
+
+        # Identity patches (SEARCH == REPLACE, or every pair a no-op) never
+        # touch disk and never produce a .bak.
+        if new == old:
+            continue
 
         if len(old) > 800 and len(new) < len(old) * 0.5:
             errors.append(
@@ -406,21 +477,17 @@ def apply_patches(
         if p.suffix == ".html" and not new.rstrip().endswith("</html>"):
             errors.append(f"{path}: HTML missing closing </html> after patch.")
             continue
-        
-        if p.suffix == ".html" and not new.rstrip().endswith("</html>"):
-            errors.append(f"{path}: HTML missing closing </html> after patch.")
-            continue
 
-        # 🛡️ NEW SAFETY CHECK: Python Syntax
+        # 🛡️ Python syntax check
         if p.suffix == ".py":
             try:
                 ast.parse(new)
             except SyntaxError as e:
-                errors.append(f"{path}: Python SyntaxError at line {e.lineno}: {e.msg}")
+                errors.append(
+                    f"{path}: Python SyntaxError at line {e.lineno}: {e.msg}"
+                )
                 continue
 
-        plan.append((path, old, new, had_crlf))
-        
         plan.append((path, old, new, had_crlf))
 
     if errors:
@@ -438,8 +505,8 @@ def apply_patches(
         print(f"\n🧪 DRY RUN — {len(plan)} file(s) would change:\n")
         for path, old, new, _ in plan:
             sys.stdout.writelines(difflib.unified_diff(
-                old.splitlines(keepends=True),
-                new.splitlines(keepends=True),
+                _split_for_diff(old),
+                _split_for_diff(new),
                 fromfile=f"a/{path}", tofile=f"b/{path}",
             ))
             print()
@@ -450,7 +517,7 @@ def apply_patches(
         p = root / path
         if had_crlf:
             new = new.replace("\n", "\r\n")
-        
+
         # 1. Ensure parent directory exists (for new folders)
         p.parent.mkdir(parents=True, exist_ok=True)
 
@@ -460,7 +527,9 @@ def apply_patches(
             if bak.exists():
                 bak.unlink()
             p.rename(bak)
-            
-        # 3. Write the new file
-        p.write_text(new, encoding="utf-8")
+
+        # 3. Write via open(newline="") so text-mode doesn't re-translate
+        #    \n → \r\n and produce \r\r\n. This is the fix.
+        with open(p, "w", encoding="utf-8", newline="") as fh:
+            fh.write(new)
         print(f"  ✓ {path}")
