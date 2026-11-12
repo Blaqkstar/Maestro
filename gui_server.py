@@ -986,14 +986,51 @@ def _parse_chat_markers(text: str) -> dict:
 
 
 def _extract_status(content: str) -> dict:
-    for line in reversed(content.splitlines()):
-        line = line.strip()
-        if line.startswith("PLAN READY:"):
-            return {"type": "plan_ready", "summary": line[len("PLAN READY:"):].strip()}
-        if line.startswith("NEED INFO:"):
-            return {"type": "need_info", "question": line[len("NEED INFO:"):].strip()}
-        if line.startswith("OPTIONS:"):
-            return {"type": "options", "summary": line[len("OPTIONS:"):].strip()}
+    """Extract the most actionable status line from the planner's response.
+
+    The planner is told to end with exactly ONE status line, but the model
+    frequently emits multiple (PLAN READY + NEED INFO + OPTIONS together).
+    Priority is fixed regardless of order so `plan_ready` always wins when
+    present — otherwise the "Execute plan in Code mode" button never appears.
+    """
+    plan_ready = None
+    need_info = None
+    options = None
+    for line in content.splitlines():
+        stripped = line.strip()
+        upper = stripped.upper()
+        if upper.startswith("PLAN READY:") and plan_ready is None:
+            plan_ready = {
+                "type": "plan_ready",
+                "summary": stripped[len("PLAN READY:"):].strip(),
+            }
+        elif upper.startswith("NEED INFO:") and need_info is None:
+            need_info = {
+                "type": "need_info",
+                "question": stripped[len("NEED INFO:"):].strip(),
+            }
+        elif upper.startswith("OPTIONS:") and options is None:
+            options = {
+                "type": "options",
+                "summary": stripped[len("OPTIONS:"):].strip(),
+            }
+
+    if plan_ready:
+        return plan_ready
+    if need_info:
+        return need_info
+    if options:
+        return options
+    
+    # Plan-mode model went off-script and emitted implementation code
+    # (<<<EDIT>>> / <<<PATCH>>>) instead of a plan. Surface as plan_ready
+    # so the "Execute in Code mode" button appears — otherwise the user is
+    # stuck with a wall of code they can't act on.
+    if "<<<EDIT" in content or "<<<PATCH" in content:
+        return {
+            "type": "plan_ready",
+            "summary": "Implementation code produced — switch to Code mode to apply.",
+        }
 
     if len(content) > 200 and ("1." in content or "- " in content or "##" in content):
         return {"type": "plan_ready", "summary": "Plan generated (missing status tag)."}
@@ -1285,6 +1322,36 @@ You help the user think through changes to their codebase:
 CRITICAL RULE: You do NOT have write access. Do NOT output HTML, CSS, JavaScript, or implementation code.
 If the user asks you to "build", "create", or "write" a file, you must ONLY output a step-by-step plan on how to do it.
 
+IMPLEMENTATION REQUESTS — MANDATORY RESPONSE SHAPE:
+If the user's request reads as "create a file", "write X", "add a
+function", "implement Y", or any other phrasing whose literal
+completion is emitting code, you MUST:
+
+  1. NOT emit `<<<EDIT>>>` or `<<<PATCH>>>` blocks.
+  2. NOT dump implementation code.
+  3. Respond with a short plan that names:
+       - the file(s) to be created or modified
+       - the structure of the change (what functions/classes/sections
+         are involved)
+       - any design decisions or ambiguities worth surfacing
+  4. End with exactly one status line:
+       PLAN READY: <one-line summary of the intended change>
+
+Concrete example — user says "create fixtures/big.py with 500 identical
+functions." CORRECT response:
+
+  Plan:
+  1. Create fixtures/big.py.
+  2. Generate 500 identical function definitions (func_0 through
+     func_499, each returning "hi") using a loop or list-comprehension
+     write rather than hand-authoring.
+  3. Save the file.
+
+  PLAN READY: Create fixtures/big.py with 500 identical functions.
+
+WRONG response: emitting a literal `<<<EDIT>>>` block containing all
+500 functions. That's the Code-mode model's job, not yours.
+
 FILE ACCESS PROTOCOL:
 You do not have direct file access. To read, emit markers on their own lines:
   <<<READ path="relative/file.py">>>
@@ -1407,6 +1474,14 @@ FILE TREE:
 
     status = _extract_status(final_content)
     session["last_status"] = status
+    # Persist the status on the last assistant message so reloading the
+    # session re-renders the status pill and the "Execute plan" button.
+    # Without this, the ephemeral SSE-rendered button vanishes on the next
+    # loadSession() call.
+    for m in reversed(session["messages"]):
+        if m["role"] == "assistant":
+            m["status"] = status
+            break
     _save_session(session)
 
     yield sse({"event": "status", "status": status})

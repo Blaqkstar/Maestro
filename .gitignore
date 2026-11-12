@@ -39,3 +39,4 @@ Thumbs.db
 .env.production.local
 *.pem
 history/*
+logs/LM Studio Server Log.txt

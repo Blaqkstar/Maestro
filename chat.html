@@ -377,7 +377,7 @@
         background: rgba(168, 85, 247, 0.05);
         border: 1px solid rgba(168, 85, 247, 0.2);
         border-radius: var(--radius);
-        margin-bottom: 10px;
+        margin-top: 10px;
         overflow: hidden;
         font-size: 13px;
       }
@@ -1389,6 +1389,7 @@
         showThinking: true,
         autoCollapseThinking: true,
         autoScroll: true,
+        pinnedToBottom: true,
         expandedThinking: new Set(),
         fileList: null,
         fileListForSession: null,
@@ -1545,6 +1546,7 @@
         state.expandedThinking = new Set();
         state.fileList = null;
         state.fileListForSession = null;
+        state.pinnedToBottom = true;
         renderHeader();
         renderMessages();
         renderSessionList();
@@ -1587,7 +1589,6 @@
           return;
 
         try {
-          // If we have a session, use the session endpoint
           if (state.current) {
             const r = await fetch(
               `/api/chat/session/${state.current.id}/files`,
@@ -1599,7 +1600,6 @@
               return;
             }
           }
-          // Otherwise, use scan-folder
           const r = await fetch("/api/scan-folder", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1785,22 +1785,30 @@
         el.className = "msg assistant";
         const id = "msg-" + Math.random().toString(36).slice(2);
         let html = "";
-        if (m.thinking && state.showThinking)
-          html += renderThinking(m.thinking, id, m.thinking_duration_s);
+        // Content bubble first
         html += `<div class="bubble">${renderMarkdown(m.content || "")}`;
         if (m.status) {
           html += renderStatusPill(m.status);
           if (m.status.type === "plan_ready" && state.current.mode === "plan") {
+            const sumJson = JSON.stringify(
+              JSON.stringify(m.status.summary || ""),
+            ).replace(/"/g, "&quot;");
+            const conJson = JSON.stringify(
+              JSON.stringify(m.content || ""),
+            ).replace(/"/g, "&quot;");
             html += `
         <div class="plan-to-act-wrap">
-          <button class="btn-plan-to-act" onclick="useThisPlan(${JSON.stringify(JSON.stringify(m.status.summary || "")).replace(/"/g, "&quot;")}, ${JSON.stringify(JSON.stringify(m.content || "")).replace(/"/g, "&quot;")})">
-            Use this plan →
+          <button class="btn-plan-to-act" onclick="useThisPlan(${sumJson}, ${conJson})">
+            Execute this plan in Code mode →
           </button>
-          <span class="plan-to-act-hint">Switch to Code mode with this plan prefilled</span>
+          <span class="plan-to-act-hint">Switches mode and starts immediately</span>
         </div>`;
           }
         }
         html += `</div>`;
+        // Thinking below content
+        if (m.thinking && state.showThinking)
+          html += renderThinking(m.thinking, id, m.thinking_duration_s);
         const tokens = m.usage_total
           ? `<span class="msg-tokens">${formatTokens(m.usage_total)} tok</span>`
           : "";
@@ -1945,26 +1953,52 @@
           `Execute this plan:\n\n${summary || ""}\n\nFull plan context:\n${planText}`.trim();
         autoResizeInput();
         updateInputUI();
-        $("input").focus();
         renderHeader();
         renderMessages();
+        // Auto-execute: switch is complete, send the message immediately.
+        await sendMessage();
       }
       window.useThisPlan = useThisPlan;
 
       // ─── Scroll ───────────────────────────────────────────────────────────
+      // Auto-follow is controlled by state.pinnedToBottom:
+      //   - true  → new content scrolls to bottom automatically
+      //   - false → new content does NOT scroll; user is reading
+      // The Settings "auto-scroll" checkbox acts as a master switch.
       function scrollToBottom(force = false) {
-        if (!state.autoScroll && !force) return;
+        const shouldScroll =
+          force || (state.autoScroll && state.pinnedToBottom !== false);
+        if (!shouldScroll) return;
         const m = $("messages");
         m.scrollTop = m.scrollHeight;
         $("scroll-bottom").classList.remove("show");
       }
+      let _lastScrollTop = 0;
       $("messages").addEventListener("scroll", () => {
         const m = $("messages");
-        const nearBottom = m.scrollHeight - m.scrollTop - m.clientHeight < 80;
-        if (nearBottom) $("scroll-bottom").classList.remove("show");
-        else if (state.autoScroll) $("scroll-bottom").classList.add("show");
+        const current = m.scrollTop;
+        const delta = current - _lastScrollTop;
+        _lastScrollTop = current;
+        // "Near bottom" uses a tight threshold so pinning requires
+        // the user to genuinely re-engage with the tail of the stream.
+        const nearBottom = m.scrollHeight - current - m.clientHeight <= 8;
+
+        if (delta < -4) {
+          // Meaningful user scroll up → pause auto-follow
+          state.pinnedToBottom = false;
+        } else if (nearBottom) {
+          // Any downward motion that lands at the bottom → resume
+          state.pinnedToBottom = true;
+        }
+
+        $("scroll-bottom").classList.toggle("show", !state.pinnedToBottom);
       });
-      $("scroll-bottom").onclick = () => scrollToBottom(true);
+      $("scroll-bottom").onclick = () => {
+        state.pinnedToBottom = true;
+        $("scroll-bottom").classList.remove("show");
+        const m = $("messages");
+        m.scrollTop = m.scrollHeight;
+      };
 
       // ─── Streaming ────────────────────────────────────────────────────────
       async function sendMessage() {
@@ -1992,8 +2026,13 @@
         const assistantEl = document.createElement("div");
         assistantEl.className = "msg assistant";
         const msgId = "msg-" + Math.random().toString(36).slice(2);
-        assistantEl.innerHTML = `<div id="${msgId}-thinking"></div><div id="${msgId}-status"></div><div class="bubble" id="${msgId}-content"></div>`;
+        // Content bubble first; thinking and status render below it.
+        assistantEl.innerHTML = `<div class="bubble" id="${msgId}-content"></div><div id="${msgId}-thinking"></div><div id="${msgId}-status"></div>`;
         messagesEl.appendChild(assistantEl);
+
+        // Re-engage follow mode on a fresh send
+        state.pinnedToBottom = true;
+        $("scroll-bottom").classList.remove("show");
 
         const thinkingEl = $(msgId + "-thinking");
         const statusEl = $(msgId + "-status");
@@ -2158,7 +2197,7 @@
                           wrap.className = "plan-to-act-wrap";
                           const btn = document.createElement("button");
                           btn.className = "btn-plan-to-act";
-                          btn.textContent = "Use this plan →";
+                          btn.textContent = "Execute this plan in Code mode →";
                           btn.onclick = () =>
                             useThisPlan(
                               status.summary || "",
@@ -2167,7 +2206,7 @@
                           const hint = document.createElement("span");
                           hint.className = "plan-to-act-hint";
                           hint.textContent =
-                            "Switch to Code mode with this plan prefilled";
+                            "Switches mode and starts immediately";
                           wrap.appendChild(btn);
                           wrap.appendChild(hint);
                           contentEl.appendChild(wrap);
@@ -2185,7 +2224,7 @@
                           ? `${evt.size}B`
                           : "";
                       chip.innerHTML = `<span class="tool-icon">${icon}</span>${evt.type} ${escapeHtml(evt.path)}${label ? ` <span class="tool-size">${label}</span>` : ""}`;
-                      contentEl.parentElement.insertBefore(chip, contentEl);
+                      statusEl.appendChild(chip);
                       scrollToBottom();
                     },
                   });
@@ -2240,20 +2279,6 @@
           case "critic_start": {
             const chip = ctx.onCriticStart();
             ctx.setCriticChip(chip);
-            break;
-          }
-          case "critic_retry": {
-            if (criticChip) criticChip.remove();
-            criticChip = null;
-            const badge = document.createElement("div");
-            badge.className = "critic-chip";
-            badge.innerHTML = `⚠️ Critic rejected — retrying…`;
-            badge.style.background = "rgba(234,179,8,0.08)";
-            badge.style.borderColor = "rgba(234,179,8,0.25)";
-            badge.style.color = "var(--yellow)";
-            statusEl.appendChild(badge);
-            criticChip = badge;
-            scrollToBottom();
             break;
           }
           case "critic_approved": {
